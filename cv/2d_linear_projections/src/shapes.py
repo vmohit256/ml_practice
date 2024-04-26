@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import math
 from PIL import Image
+import time
 
 class Quadrilateral:
     def __init__(self, points, color, pygame_context):
@@ -111,7 +112,71 @@ class Grid:
                 if new_grid.quadrilaterals[i][j] is None:
                     return None
         return new_grid
+
+class GifViewPort:
+    def __init__(self, four_corners, pygame_context, frames, points = None, color_indices = None):
+        self.pygame_context = pygame_context
+        self.four_corners = copy.deepcopy(four_corners)
+        self.frames = frames
+        if points is None:
+            # construct the points and color_indices matrices
+            ref_point = self.four_corners[0]
+            opposite_point = self.four_corners[2]
+            sign = lambda x: 1 if x>=0 else -1
+            x, y = round(ref_point[0]), round(ref_point[1])
+            x_delta, y_delta = round(opposite_point[0] - ref_point[0]), round(opposite_point[1] - ref_point[1])
+            gif_w, gif_h = frames[0].shape[:2]
+            if x_delta == 0: x_delta += 1
+            if y_delta == 0: y_delta += 1
+            self.points = []
+            self.color_indices = []
+            for d_x in range(0, x_delta, sign(x_delta)):
+                for d_y in range(0, y_delta, sign(y_delta)):
+                    self.points.append([float(x + d_x), float(y + d_y)])
+                    image_x = int(gif_w * d_y / y_delta)
+                    image_y = int(gif_h * d_x / x_delta)
+                    self.color_indices.append([image_x, image_y])
+            self.points = np.array(self.points)
+        else:
+            assert frames is not None, "Frames cannot be Null if the points are already computed"
+            self.points = copy.deepcopy(points)
+            self.color_indices = copy.deepcopy(color_indices)
+
+    def draw(self):
+        frame_idx = int(12 * time.time()) % len(self.frames)
+        for point, color_idx in zip(self.points, self.color_indices):
+            rounded_point = [round(point[0]), round(point[1])]
+            self.pygame_context.screen.set_at(rounded_point, self.frames[frame_idx][color_idx[0]][color_idx[1]])
+
+    def centroid(self):
+        x_coordinate = sum([p[0] for p in self.four_corners]) / len(self.four_corners)
+        y_coordinate = sum([p[1] for p in self.four_corners]) / len(self.four_corners)
+        return [x_coordinate, y_coordinate]
     
+    # returns None if the transformation fails on any of the quadrilaterals  
+    def applyTransformation(self, transformation):
+        new_gif_viewport = GifViewPort(self.four_corners, self.pygame_context, self.frames, self.points, self.color_indices)
+        for points_list in [new_gif_viewport.four_corners]:
+            for i in range(len(points_list)):
+                transformed_point = transformation.transform(points_list[i])
+                if transformed_point[2]==0: return None
+                if (transformed_point[0] < 0  or transformed_point[0] >= self.pygame_context.width):
+                    return None
+                if (transformed_point[1] < 0  or transformed_point[1] >= self.pygame_context.height):
+                    return None
+                points_list[i] = [transformed_point[0], transformed_point[1]]
+        new_gif_viewport.points = transformation.transformAll(new_gif_viewport.points)
+        if np.any(new_gif_viewport.points[:, -1] == 0):
+            return None
+        new_gif_viewport.points[:, 0] = new_gif_viewport.points[:, 0] / new_gif_viewport.points[:, 2]
+        new_gif_viewport.points[:, 1] = new_gif_viewport.points[:, 1] / new_gif_viewport.points[:, 2]
+        new_gif_viewport.points = new_gif_viewport.points[:, :2]
+        if (np.any(new_gif_viewport.points < 0) 
+            or np.any(new_gif_viewport.points[:, 0] >= self.pygame_context.width) 
+            or np.any(new_gif_viewport.points[:, 1] >= self.pygame_context.height)):
+            return None
+        return new_gif_viewport
+
 def getFourCornerPointsFromDiagonalPoints(start_point, end_point):
     points = [
         list(start_point),
@@ -140,7 +205,7 @@ def drawDashedLine(surface, color, start_pos, end_pos, width=1, dash_length=5):
         pygame.draw.line(surface, color, segment_start_point, segment_end_point, width)
         start_distance += 1.5*dash_length
 
-def extract_gif_frames(gif_path):
+def extractGifFrames(gif_path):
     im = Image.open(gif_path)
     frames = []
     # To iterate through the entire gif

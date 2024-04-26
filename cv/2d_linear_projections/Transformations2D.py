@@ -11,7 +11,7 @@ from src.static_drawings import draw_demo_v1
 # load gifs
 gif_frames = []
 for fname in ['killua', 'killua_gon', 'naruto']:
-    gif_frames.append(extract_gif_frames(f'../../data/gifs/{fname}.gif'))
+    gif_frames.append(extractGifFrames(f'../../data/gifs/{fname}.gif'))
 
 # Initialize Pygame
 SCREEN_WIDTH = 800
@@ -112,13 +112,22 @@ while running:
                     elif (mods & pygame.KMOD_CTRL):
                         if step > 0:
                             step -= 1
-                state_variables.clear()
+                if mode == 'create' and (event.key in [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4]):
+                    idx = [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4].index(event.key)
+                    if idx == 0:
+                        state_variables['active_drawing_spec'] = {'type': 'Grid'}
+                    else:
+                        state_variables['active_drawing_spec'] = {'type': 'GIF', 'gif_idx': idx-1}
+                else:
+                    state_variables.clear()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if mode == 'create':
                 state_variables['rectangle_diagonal'] = [event.pos, event.pos]
-                state_variables['active_drawing'] = \
-                    Grid(getFourCornerPointsFromDiagonalPoints(*(state_variables['rectangle_diagonal'])), 
-                         pygame_context)
+                if 'active_drawing_spec' not in state_variables or state_variables['active_drawing_spec']['type'] == 'Grid':
+                    state_variables['active_drawing'] = Grid(getFourCornerPointsFromDiagonalPoints(*(state_variables['rectangle_diagonal'])), pygame_context)
+                else:
+                    state_variables['active_drawing'] = \
+                        GifViewPort(getFourCornerPointsFromDiagonalPoints(*(state_variables['rectangle_diagonal'])), pygame_context, gif_frames[state_variables['active_drawing_spec']['gif_idx']])
             elif mode in ['translate', 'rotate', 'scale', 'deform', 'perspective_rotation_along_y', 'perspective_rotation_along_x']:
                 if 'active_corner_data' in state_variables:
                     state_variables['active_transformation_data'] = {
@@ -146,9 +155,11 @@ while running:
             if mode=='create':
                 if 'active_drawing' in state_variables:
                     state_variables['rectangle_diagonal'][1] = event.pos
-                    state_variables['active_drawing'] = \
-                        Grid(getFourCornerPointsFromDiagonalPoints(*(state_variables['rectangle_diagonal'])), 
-                             pygame_context)
+                    if 'active_drawing_spec' not in state_variables or state_variables['active_drawing_spec']['type'] == 'Grid':
+                        state_variables['active_drawing'] = Grid(getFourCornerPointsFromDiagonalPoints(*(state_variables['rectangle_diagonal'])), pygame_context)
+                    else:
+                        state_variables['active_drawing'] = \
+                            GifViewPort(getFourCornerPointsFromDiagonalPoints(*(state_variables['rectangle_diagonal'])), pygame_context, gif_frames[state_variables['active_drawing_spec']['gif_idx']])
             elif mode in ['translate', 'rotate', 'scale', 'deform', 'perspective_rotation_along_y', 'perspective_rotation_along_x']:
                 if 'active_transformation_data' in state_variables:
                     current_mouse_position = event.pos
@@ -235,8 +246,8 @@ while running:
     # display the current mode at top right
     pretty_mode_names = {"perspective_rotation_along_y": "rotate y", "perspective_rotation_along_x": "rotate x"}
     current_mode_text = f"current mode: {pretty_mode_names.get(mode, mode)}"
-    current_mode_text = pygame.font.Font(None, 22).render(current_mode_text, True, (128, 0, 0))
-    pygame_context.screen.blit(current_mode_text, (0, 20))
+    current_mode_text = pygame.font.Font(None, 36).render(current_mode_text, True, (0, 128, 0))
+    pygame_context.screen.blit(current_mode_text, (300, 30))
 
     # draw_demo_v1(pygame_context)
 

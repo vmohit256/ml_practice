@@ -6,6 +6,12 @@ class Transformation:
     def __init__(self, matrix):
         self.matrix = copy.deepcopy(matrix)
     
+    def transformAll(self, points):
+        # points is a numpy array of shape [n, 2]
+        homogenous_points = np.hstack((points, np.ones((points.shape[0], 1)))).T
+        transformed_points = (self.matrix @ homogenous_points).T
+        return transformed_points
+
     def transform(self, point):
         homogeneous_point = np.array(list(point) + [1])
         transformed_point = self.matrix @ homogeneous_point
