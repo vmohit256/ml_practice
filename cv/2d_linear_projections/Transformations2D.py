@@ -2,11 +2,13 @@ import pygame
 import numpy as np
 import copy
 import math
+import datetime
 
 from src.pygame_utils import PyGameContext, COLORS
 from src.shapes import *
 from src.transformations import *
 from src.static_drawings import draw_demo_v1
+from src.pygame_screen_recorder import pygame_screen_recorder
 
 # load gifs
 gif_frames = []
@@ -14,11 +16,12 @@ for fname in ['killua', 'killua_gon', 'naruto']:
     gif_frames.append(extractGifFrames(f'../../data/gifs/{fname}.gif'))
 
 # Initialize Pygame
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 800
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 600
 pygame_context = PyGameContext(width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
 corner_circle_active_radius = 10
 observer_distance = 400
+record = True
 
 # drawings_timeline[t] contains all drawings valid at time t
 drawings_timeline = [[]]
@@ -78,6 +81,10 @@ state_variables = {}
 # scale: scale around centroid (key: 'r')
 # deform: squish / stretch around an axis (key: 'd')
 # perspective: rotate out of plane around an axis lying on the plane through the centroid and then project it back to the plane. (key: 'p')
+
+if record:
+    # init recorder object
+    screen_recorder = pygame_screen_recorder(f"tmp/{datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.gif") 
 
 # Game loop
 running = True
@@ -239,15 +246,20 @@ while running:
     pygame_context.screen.fill(pygame_context.background_color)
 
     # display instructions at top left
-    instructions_text = "c = create   v = view   t = translate   r = rotate z   s = scale   d = deform   x = rotate x   y = rotate y"
-    instructions_text = pygame.font.Font(None, 22).render(instructions_text, True, (128, 0, 0))
+    instructions_font_size, instructions_color = 22, (128, 0, 0)
+    instructions_text = "c = create   v = view   t = translate   r = rotate z   s = scale"
+    instructions_text = pygame.font.Font(None, instructions_font_size).render(instructions_text, True, instructions_color)
     pygame_context.screen.blit(instructions_text, (0, 0))
+
+    instructions_text = "d = deform   x = rotate x   y = rotate y"
+    instructions_text = pygame.font.Font(None, instructions_font_size).render(instructions_text, True, instructions_color)
+    pygame_context.screen.blit(instructions_text, (0, 20))
 
     # display the current mode at top right
     pretty_mode_names = {"perspective_rotation_along_y": "rotate y", "perspective_rotation_along_x": "rotate x"}
     current_mode_text = f"current mode: {pretty_mode_names.get(mode, mode)}"
     current_mode_text = pygame.font.Font(None, 36).render(current_mode_text, True, (0, 128, 0))
-    pygame_context.screen.blit(current_mode_text, (300, 30))
+    pygame_context.screen.blit(current_mode_text, (SCREEN_WIDTH // 2 - 100, 40))
 
     # draw_demo_v1(pygame_context)
 
@@ -280,8 +292,17 @@ while running:
             elif marking[0]=="dashed_line":
                 drawDashedLine(pygame_context.screen, COLORS['black'], marking[1], marking[2])
 
+    if record:
+        screen_recorder.click(pygame_context.screen) # save frame as png to _temp_/ folder
+
     # Update the display
     pygame.display.flip()
+
+if record:
+    start_time = time.time()
+    # compiles temp folder to a .gif at specified location and cleans up
+    screen_recorder.save() 
+    print (f"Time taken to save the recording: {(time.time() - start_time) / 60} mins")
 
 # Quit Pygame
 pygame.quit()
