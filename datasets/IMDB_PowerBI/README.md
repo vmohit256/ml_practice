@@ -1,3 +1,4 @@
+<img src="./demo.gif" alt="A GIF showing the demo" width="800" height="450">
 
 # Introduction
 
