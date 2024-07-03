@@ -18,6 +18,8 @@ from io import BytesIO
 import sys
 
 # Increase the recursion limit to 4000
+# without this some pages with deep nesting of templates will cause RecursionError
+# when parsed with mwparserfromhell
 sys.setrecursionlimit(4000)
 
 class BZ2FileSegmentReader:
