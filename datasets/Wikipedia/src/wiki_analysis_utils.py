@@ -3,6 +3,7 @@ This file contains utility functions for analyzing Wikipedia snapshot data.
 """
 
 import time, traceback, json, random
+import pandas as pd
 
 def normalized_page_name(page_name):
     return page_name.lower().split('#')[0]
@@ -134,3 +135,27 @@ def load_category_name_to_id_map(data_root_dir, silent=False):
         print (success_count, failure_counts)
         print (len(categories['id_to_name']), len(categories['name_to_id']))
     return categories, failure_counts
+
+"""
+Load category graph adjacency lists
+"""
+def load_category_graph(data_root_dir, silent=False):
+    parent_graph_adj_lists = {}
+    child_graph_adj_lists = {}
+    n_edges_loaded = 0
+    start_time = time.time()
+    silent=False
+    for _, row in pd.read_csv(data_root_dir + 'category_id_to_parent_category_ids.tsv', 
+                              sep='\t', dtype={'CategoryId': 'int32', 'ParentCategoryId': 'int32'}).iterrows():
+        cid1 = row['CategoryId']
+        cid2 = row['ParentCategoryId']
+        if cid1 not in parent_graph_adj_lists:
+            parent_graph_adj_lists[cid1] = []
+        parent_graph_adj_lists[cid1].append(cid2)
+        if cid2 not in child_graph_adj_lists:
+            child_graph_adj_lists[cid2] = []
+        child_graph_adj_lists[cid2].append(cid1)
+        n_edges_loaded += 1
+        if n_edges_loaded % 500000 == 0 and not silent:
+            print(f"Loaded {n_edges_loaded} edges in {(time.time() - start_time) / 60} minutes")
+    return parent_graph_adj_lists, child_graph_adj_lists
