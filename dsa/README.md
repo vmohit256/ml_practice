@@ -38,3 +38,5 @@ https://www.geeksforgeeks.org/learn-data-structures-and-algorithms-dsa-tutorial/
     - https://cp-algorithms.com/geometry/convex-hull.html
 * closest pair of points
     - https://cp-algorithms.com/geometry/nearest_points.html
+* TODO: skip list
+* TODO: maxflow-mincut, fft, sparse table, segment trees
