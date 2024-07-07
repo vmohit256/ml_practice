@@ -2,6 +2,7 @@
 bin
 local
 tmp
+tmp.*
 .vscode
 
 # Byte-compiled / optimized / DLL files
