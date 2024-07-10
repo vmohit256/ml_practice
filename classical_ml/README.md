@@ -1,11 +1,12 @@
 
-# Concepts
+# Notes
 
-1. Bias/Variance tradeoff
+- Bias/Variance tradeoff
     - Total errors in generalization = (error due to bias) + (error due to variance) + (intrinsic error in the dataset) [1]
         - error due to bias = error due to wrong assumptions about data (eg: linear regression on circular boundary) = error due to poor / underfitting of training data
         - error due to variance = error due to model being *very* sensitive to the training data / process and hence fitting noise inside it = error due to overfitting on training data
         - intrinsic error = even the best most optimal algorithm can not reduce error more than this on the dataset
+        - TODO: get a source that formalizes this
     - "Tradeoff" may not be the right way to think about this, especially in modern deep learning models [2]
         - increase model size -> reduce bias without affecting variance (assuming it is properly regularized)
         - add more training data -> reduce variance without affecting bias (TODO: not very clear why and what are hidden assumptions in this)
@@ -16,9 +17,140 @@
         1. High bias / large training error -> bigger network, train longer, (different architecture / model)
         2. Low bias AND High variance -> get more data, stronger regularization, (different architecture / model)
     - Intuition: result of voting on 1000 biased coin toss to reduce prediction variance while keeping bias the same
+- classification
+    - metrics
+        - accuracy: has issues if data is skewed
+        - confusion matrix: great but not very concise
+        - precision: tp / (tp + fp)
+        - recall: tp / (tp + fn)
+        - f1-score: 
+            - harmonic mean of precision and recall
+                - [why not other stats like arithmetic mean or geometric mean?](https://stats.stackexchange.com/questions/532068/why-use-harmonic-mean-for-precision-and-recall-f1-score-instead-of-just-the-pr)
+            - concise and avoids pitfalls of accuracy
+        - ROC-curve (Receiver Operating Characteristic)
+            - true positive rate (recall) on y-axis
+            - false positive rate (not precision) on x-axis
+            - metric is Area Under Curve (ROC AUC)
+            - gini coefficient = 2 * AUROC - 1
+            - TODO: definition seems convoluted and not very well motivated. Need to get better source that explains the motivation well
+        - precision-recall curve (precision on y-axis, recall on x-axis)
+        - prefer precision over ROC AUC when positive class is rare
+            - in such cases, precision-recall curve shows the low precision for bad classifiers but ROC curve will show both high recall and low FPR
+            - general principle: metric should make the difference between high and low quality easy to see
+            - general principle: use as many metrics as possible. Ideally, use all ROC AUC, precision-recall, f1-score, f-alpha scores, etc.
+    - multiclass
+        - how to compute metrics like f1, ROC AUC, etc.?
+            - computer one vs all and average
+            - accuracy is straightforward. AlexNet paper uses it
+        - some algorithms like decision tree based models (random forect, gbt, etc.) can handle them directly
+        - strategies for inherently binary classifiers like logistic, SVM, etc.
+            - OvA (one versus all): train n classifiers, 1 for each class
+            - OvO (one v/s one classifier): train all pairwise combinations of classes
+                - each classifier trains on smaller subset of training data so it can be faster 
+                    - may work better for SVM or models scaling poorly with training data size
+    - multilabel 
+        - examples: extract all traffic signals from an image, identify faces of everyone present in the image
+- optimization
+    - linear regression
+        - closed form solution
+            - scales well with number of samples but expensive matrix inversion if there are too many features
+        - ridge regression: version with l2 regularizer
+            - important to standardize the feature else the regularizer term will unduly penalize weights for small scale features
+        - lasso regression: version with l1 regularizer
+            - outputs sparser model than l2. [It might be better to say that l2 discourages sparsity while l1 allows it](https://stats.stackexchange.com/questions/45643/why-l1-norm-for-sparse-models)
+            - gradient descent works because we use sub-gradient on non-differentiable points
+    - regularizations
+        - don't worry too much about regularization without first verifying that you can actually overfit on the training data
+        - reduces variance without adding too much bias
+        - l2
+        - l1
+        - early stopping
+        - dropout (add more on layers with more features and hence more likely to overfit)
+    - gradient descent
+        - may diverge if learning rate is too high
+        - faster if all features have similar scale
+            - runs very slowly on elongated ellipses but runs faster for circles
+        - scales well with number of features but poorly with data size. Computing gradient on full dataset very expensive
+        - stochastic gradient descent
+            - only use gradient on 1 sample in each step
+            - more unstable but can potentially find global minima too
+            - simulated annealing 
+                - start with a high learning rate and reduce slowly
+            - mini-batch gradient descent
+                - combines best of both worlds but at the cost of yet another hyperparameter to tune
+    - polynomial regression: generate polynomial features and run linear regression on it
+    - logistic regression
+        - cross entropy loss: average across dataset (sum_c y_c * (-log(p_c))) ([intuitive explaination](https://www.youtube.com/watch?v=ErfnhcEV1O8&ab_channel=Aur%C3%A9lienG%C3%A9ron))
+- SVM
+    - sensitive to feature scale. Better to center and normalize before feeding into the model
+    - constraint optimization problem
+        - quadratic loss function and linear constraints
+        - has single global minimum and the loss function is convex so gradient descent can find it
+        - TODO: kkt conditions, langrangian, primal-dual
+    - loss function [3]
+        - margin size: distance between hyperplanes w^T x = +1 and -1. Proportional to w^T w
+        - slack variable loss for miss-classified points
+            - L1-SVM: max(0, 1 - y_i * w^T * x_i)
+            - L2-SVM: (1 - y_i * w^T * x_i)^2
+    - support vectors: 
+        - data points on decision boundary
+        - most difficult to classify
+        - defines the separating hyperplane
+    - kernel trick for non-linear decision boundaries
+        - optimize dual of the original problem
+        - replace xi . xj with K(xi, xj) in the cost function where K implicitly defines non-linear kernel
+        - polynomial kernel, radial basis function, sigmoid, string kernels (like Levenshtein distance. used for text docs, DNA, etc.)
+        - [How to pick kernel?](https://stats.stackexchange.com/questions/18030/how-to-select-kernel-for-svm)
+            - kernel is a sort of similarity / distance function so pick one that makes most sense for the application
+            - add landmark features, f_l(x) = exp(-gamma * l2norm(x - l)^2)
+                - adding a lot of landmark fetures increases the chance of making it linearly seperable but may cause overfitting
+                - idea: add landmarks close to support vectors or boundary regions where class changes rapidly
+    - linearSVC from liblinear library is very fast (O(m x n)) but has no kernel trick
+    - kernel trick implementation is slow (O(m^k n) where k=2 or 3 and m=no. of training samples)
+- dimensionality reduction
+    - curse of dimensionality: high dimensions cause lots of issues
+        - very sparse training data. Issues like 0 dot product. eg: dot product between tf-idf document vectors
+        - each data point very far away from other data points (eg: expected distance between two random points in a unit hypercube shoots up by sqrt(n) as n increases)
+        - computationally expensive to process
+        - true dimensionality is usually much lower than the representation
+            - eg: video clip of snooker game
+            - extra dimensions add noise so reducing dimensionality may make predictions / clusters / classification more robust
+    - projection
+        - PCA: project onto variance maximizing hyperplanes
+            - variance ratio covered as a metric for how effective the projection is
+            - kernel PCA
+    - manifold learning
+        - d-dimensional manifold is part of n-dimensional space that locally resembles a d-dimensional hyperplane
+            - spiral, swiss roll, sphere, torus
+        - LLE (locally linear embedding)
+            - obtain k-nearest neighbors for each point
+            - write each point as a linear interpolation of neighbors and freeze weights
+            - obtain d-dimensional new points that minimize distance between a point and its neighbor linear interpolation from frozen weights
+            - scales quadratically with number of points so is slow for large datasets
+    - Multidimensional scaling
+        - reduce dimensionality while trying to preserve distances
+    - Isomap: preserve geodesic distance between point pairs
+        - geodesic distance = number of nodes in shortest path in a graph
+        - obtain k nearest neighbors for each point
+        - construct neighbor graph can compute all pairs shortest path using floyd-warshall
+        - run MDS on obtained distance matrix
+        - motivation: preserve geometry of the data 
+    - tSNE: keep similar instances close and dissimilar instances apart
+        - mostly used for visualizing unsupervised clusters in data
+        - might improve clustering
+    - Linear Discriminant Analysis (LDA) ([slides](http://www.facweb.iitkgp.ac.in/~sudeshna/courses/ml08/lda.pdf))
+        - preserve as much class discriminatory information as possible
+        - obtain direction that best seperates classes
+        - objection function: maximize (class mean differences) ^ 2 / (sum of within class variance)
+        - limitations:
+            - produces C-1 dimensions
+            - assumes gaussian distribution (is the kernel version also possible?)
+            - will fail if discriminator information is not in the mean but in variance
+    - TODO: ICA, NMF
 
 # References
 
 - [1] Hands on ML: https://github.com/ageron/handson-ml3
 - [2] Andrew NG videos ([Bias/Variance (C2W1L02)](https://www.youtube.com/watch?v=SjQyLhQIXSM&t=23s&ab_channel=DeepLearningAI), [Basic Recipe for Machine Learning (C2W1L03)](https://www.youtube.com/watch?v=C1N_PDHuJ6Q&ab_channel=DeepLearningAI)) 
-
+- [3] Linear SVC: https://www.csie.ntu.edu.tw/~cjlin/liblinear/
+- [4] SVM: https://web.mit.edu/6.034/wwwbob/svm-notes-long-08.pdf
