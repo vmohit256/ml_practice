@@ -238,7 +238,13 @@
     * Generate many outputs, and then use the model to pick the best one
     * Least-to-most prompting: split reasoning tasks into smaller more reliable sub-tasks
     * Verifiers: Use a discriminator to reject bad generations and regenerate bad samples
-
+- TODO: add sources that explain different parameters like temperature, top_p, etc.
+- TODO: add sources that explain different fine-tuned models for specific tasks
+    * programming tasks -> codex
+    * guardrail tokens for following specific format like json
+- TODO: add sources that explain what are roles (like system, user, assistant, etc.) and how was the model trained for them?
+- TODO: add sources that explain how apis like calling a function work with chat gpt. Is it just prompt engineering or there is some RLHF like fine tuning done for it?
+- TODO: add sources that explain how do LLMs also take input image data
 
 
 # Links

@@ -1,0 +1,323 @@
+
+# Types of Distributions
+
+## Discrete
+
+- **Bernoulli Distribution**
+    - sample space: {H, T}
+    - event space: {{}, {H}, {T}, {H, T}} = power set of sample space
+    - probability function: P(event) = sum of P(s in event). P({H}) = alpha
+    - discrete random variable {H: 0, T: 1}
+    - induced probability function, Px(X=0) = alpha
+- **Binomial Distribution**
+    - number of heads in n independent coin flips, n repeated bernoulli trials
+    - sample space: {H, T} ^ n
+    - event space: power set of sample space
+    - probability function: P(event) = sum of P(s in event). P(s in sample space) = alpha ^ (no. of heads in s) * (1-alpha) * (no. of tails in s)
+    - discrete random variable, X(s) = number of heads in s
+    - induced probability function, Px(X=k) = nCk * alpha ^ k * (1-alpha) ^ (n-k)
+    - expectation = sum over k in {0, 1, ..., n} (k * nCk * alpha ^ k * (1-alpha) ^ k)  // k * nCk = k * n! / (k! * (n-k)!) = n * (n-1)! / ((k-1)! (n-1-(k-1))!) = n * (n-1)C(k-1)
+        = sum over k in {1, ..., n} (n * (n-1)C(k-1) * alpha ^ k * (1-alpha) ^ (n-1-(k-1)))
+        = n * alpha * sum over k-1 in {0, ..., n-1} ((n-1)C(k-1) * alpha ^ (k-1) * (1-alpha) ^ (n-1-(k-1)))
+        = n * alpha * (alpha + 1-alpha)^(n-1) = n * alpha
+- **Geometric Distribution**
+    - no. of bernoulli trials needed for success
+    - sample space: {{S}, {F, S}, {F, F, S}, {F, F, F, S}, ... till inifnity}
+    - event space: power set of sample space (TODO: are there interesting discrete cases where it is not the power set?)
+    - probability function: P(event) = sum of P(s in event). P(s in sample space) = (1-alpha) ^ (no. of failures in s) * alpha
+    - discrete random variable, X(s) = number of trials (i.e. no. of failures + 1) in s
+    - induced probability function, Px(X=k) = (1-alpha) ^ (k-1) * alpha
+    - cdf: P(X > k) = (1-alpha) ^ k
+    - memoryless property: P(X > k+m | X > k) = P(X > m)
+- **Poisson Distribution** (limiting case of binomial: n-> infinity but expected no. of success, n*p, stays the same)
+    - lambda hits per unit time (on average). Each hit is independent from each other
+        - eg: photons hitting sensor, vehicles passing intersection, etc.
+    - sample space: {0, 1, 2, ...}, i.e. natural numbers. Represents number of hits observed in a unit time period
+    - event space: power set of sample space
+    - probability function: P(event) = sum of P(s in event). P(k) = lambda ^ k * e ^ -lambda / k!
+        - if lambda is positive integer, then P is maximized at lambda-1 and lambda
+    - discrete random variable, X(k) = k
+    - limiting case of binomial distribution
+        - limit n -> infinity P_binomial(X=k; alpha = lambda / n, n) = P_poisson(X=k; lambda)
+        - model unit interval [0, 1] as 1/n sized discrete steps with probability of success / hit per interval being lambda / n
+    - linear combination of poisson is poisson (sort of)
+        - sum of independent poisson random variables with lambda and mu is poisson random variable with lambda + mu
+        - poisson thinning: first sample from poisson and then "thin" it by applying binomial distribution on it
+            - X ~ poisson(lambda)
+            - define random variable Y such that, P(Y=k | X=j) = P_binomial(Y=k | j, p)
+            - P(Y = k) = P_poisson(Y; lambda * p)
+    - expectation = lambda (proof uses taylor expansion of e^lambda)
+- **Uniform Distribution** (discrete version)
+    - sample space = {1, 2, 3, ..., n}
+    - event space = power set of sample space
+    - probability function: P(event) = sum of P(s in event). P(s in sample space) = 1 / n
+    - discrete random variable, X(k) = k
+    - pmf(k) = 1/n, cdf(k) = k/n
+    - expectation = (n * (n+1) / 2) / n = (n+1)/2
+
+## Continuous
+- **Uniform Distribution** (continuous version)
+    - sample space: [a, b] OR (a, b) (a < b)
+    - event space: borel space = borel sigma algebra over sample space (complex stuff needed here because power set of real interval would be extremely problematic)
+    - probability function: P(event) = (size of event) / (b-a) (not sure how to define the size of event or what the event even looks like :D)
+    - continuous random variable, X(v) = v where v in [a, b]
+    - pdf(x) = 1/(b-a), cdf(x) = P(X <= x) = (x-a) / (b-a)
+    - expectation = (b+a) / 2
+- **Exponential Distribution** (continuous version of poisson)
+    - models time elapsed between consecutive poisson hits with rate lambda per unit time
+    - sample space = R
+    - event space = borel non-sense
+    - probability function = ???
+    - continuous random variable, X(v) = v
+    - pdf(x) = 0 for x<0 and lambda * exp(-lambda * x) 
+        - intuition for why maxima is at 0: assume that a hit just happened. Assume that pdf increases with time and reaches a maxima. That would imply that the event that just happened at time t=0 is somehow affecting the probabilty of next event. Which shouldn't be the case due to memoryless property. Therefore the pdf should be decreasing function
+    - cdf(x) = 1 - exp(-lambda * x)
+    - memoryless propery: CDF_exponential(X > x+t | X > x) = CDF_exponential(X > t)
+    - relation to poisson
+        - say we waited for time [0, t] and Nt poisson lambda hits appeared
+        - now, we define exponential random variable Xt as time taken for next hit
+        - CDF_poisson(Xt > x) = P(Nt = Nt+x) = P_poisson(Y=0; lambda * x) (by the definition of poisson)
+    - only continuous random variable satisfying memoryless property is exponential random variable
+        - proof involves writing memoryless property as a differential equation involving cdf and then solving it
+    - expectation = lambda (proof: easy integration)
+- **Normal Distribution** 
+    - central limit theorem: as n-> infinity, average of i.i.d (independent and identically distribution) random variables tends to normal distribution around true mean
+        - poisson becomes gaussian, uniform become gaussian, binomial becomes gaussian, everything becomes gaussian if you take mean of big enough sample
+        - gaussian is linked to the idea of "mean"
+    - sample space = R
+    - event space = something something borel
+    - probability measure = ???
+    - continuous random variable, X(v) = v
+    - pdf(x) = exp(-(x-mu)^2 / (2 * sigma ^2))  // maxima is at mu. Curve looks like a bell
+        - proof of intergral being 1 using squaring and converting to polar coordinates
+    - cdf(x) has no closed form expression
+    - expectation = mu (integration is easy)
+    - things that are gaussian:
+        - speed of ideal gas particle that hits your sensor
+            - velocities of the particles in any system in thermodynamic equilibrium will have a Gaussian distribution, due to the maximum-entropy principle
+            - ideally, each component of velocity is gaussian distributed and is independent of other components
+        - position of particle undergoing diffusion
+    - limiting case of binomial distribution
+        - very involved proof
+        - basically if you simulate a 1-d random walk to infinity you get gaussian pdf for the final location
+        - random walk = take left / right based on bernoulli in each step. So final location has binomial distribution. Binomial transforms to gaussian pdf as n tends to infinity
+
+
+
+# Notes
+
+- compilation of fundamental definitions: [slides-1](https://github.com/zestyoreo/iitb_courses/blob/main/CS215%20Data%20AI/Slides_1_Probablity_Axioms.pdf), [slides-2](https://github.com/zestyoreo/iitb_courses/blob/main/CS215%20Data%20AI/Slides_2_Random_Variable.pdf)
+    - Probability space := (sample space, event space, probabilty function)
+        - event space is subset of power set of sample space closed under union, intersection, complement and containing null and full set
+        - probability function / measure is from event space to [0, 1] with some axiomatic properties
+    - Borel sigma algebra: used for defining sample space on real line -> event space obtained by: 
+        - include open intervals
+        - take closure w.r.t union, intersection, complement
+    - random variable is a function from sample space to R
+        - discrete if the possible values are countable
+        - Induced probability function: Px(a < X < b) := P(event that a < X < b) := P({s in sample space | a < X(s) < b})
+        - TODO: what is domain and range of induced probability function? 
+        - Most definitions rely on CDF: fx(x) := Px(X ≤ x). Follows some properties
+            - P(a < X <= b) = fx(b) – fx(a)
+            - P(X=a) = fx(c) - fx(c-) 
+    - TODO: what is sample space, event space, probability space for: toss a coin and then roll a die?
+    - sum of independent random variables, Z := X + Y
+        - pmf(Z) is discrete convolution of pmfs of X and Y
+        - pdf(Z) is continuous convolution of pdfs of X and Y 
+- expectation
+    - center of mass of distribution (can be very different from mode)
+    - discrete version
+        - frequentist definition: sample mean of i.i.d samples with n-> infinity
+        - another definition: E[X] = sum over all elements in sample space (X(s) * P(s))
+    - continuous version
+        - E[X] = integral -inf to inf (X(s) P(s))
+    - **Linearity of Expectation**
+        - E[X + Y] = E[X] + E[Y]  // only if X and Y share probability space
+    - expectation of function of random variable
+        - discrete: E[f(X)] = sum over all elements in sample space (f(X(s)) * P(s))
+        - continuous: E[f(X)] = integral -inf to inf (f(X(s)) P(s))
+    - if X and Y are independent then E[X * Y] = E[X] * E[Y]
+    - tail sum formula: 
+        - discrete case
+            - E[X] = sum n P(X >= n)
+            - range is natural numbers
+            - P(X >= n) = sum k>=n p(k)
+            - in sum n P(X >= n), p(k) appears k times only
+        - continuous case
+            - E[X] = integral 0 to inf (1 - CDF(x)) dx
+            - random variable must always be non-negative
+            - proof: switch integral order
+- median
+    - half the probability mass is on the left
+        - need to define more carefully for discrete case. pmf can have multiple medians
+- Markov's inequality:
+    - for any non-negative function "u" and any random variable X: P[u(X) >= c] <= E[u(X)] / c
+    - intuition:
+        - E[u(X)] is at least c * P[u(X) >= c]  // this is very weak actually
+        - pick any constant c and identify what probability mass we can assign to it and stay within E[u(X)] upper bound
+- Chebyshev's inequality
+    - P[|X-E[X]| >= a] <= Var(X) / a^2
+    - follows from markov and makes a lot of sense
+- Jensen's inequality
+    - E[f(X)] >= f(E[X]) for any convex function f
+    - f is convex then, t * f(x1) + (1-t) * f(x2) >= f(t * x1 + (1-t) * x2)  // lhs is like expectation and rhs is like f of expectation
+    - for concave its reverse
+- median minimizes: E[|X-c|]  // mean minimizes E[(X-c)^2] = E[X^2] + c^2 - 2 * c * E[X]
+    - Mean and Median are within SD(X) of each other
+        - |E[X] - median| = |E[X - median]| <= |E[X -E[X]]| (as median minimizes absolute distance from mean) <= SQRT(E[(X - E[X])^2]) // from jensen's inequality
+- Law of large numbers: for all epsilon > 0, as n -> inf, P(|sample mean - mu| >= epsilon) -> 0
+    - proof: chebyshev's inequality
+    - Note: sample mean = (sum_i X_i) / n. Each X_i should have same mean and variance but they are not required to be i.i.d (TODO: why? we want 0 covariance in proof right?)
+- Correlation(X, Y) = Covariance(X, Y) / (STD(X) * STD(Y))
+    - independence implies 0 covariance but converse is not true
+- Estimation basic definitions:
+    - {X1, X2, .., Xn} ~ X are samples from i.i.d (usually X is unknown)
+    - statistic: t = T(X1, X2, ..., Xn) 
+    - model: P(X; theta)  // X is assumed to have this distribution parameterized by theta
+        - data generation: theta -> data
+        - estimation: data -> theta
+            - Variance(T), Bias(T) = E[T] - theta
+            - MSE(T) := E[(T-theta)^2] = Variance + Bias^2
+            - Unbiased estimator: Bias(T) = 0
+            - Consistent estimator: Tn converges in probability to theta
+            - Likelihood, L(theta; {X1, X2, ..., Xn}) = product over P(Xi; theta)
+                - Maximum likelihood estimator, T := argmax theta L(theta; {X1, X2, ..., Xn})
+                    - MLE (if exists and is unique), is a consistent estimator (under some basic assumptions)
+                    - used to infer model parameters from data (eg: bernoulli probability, poisson lambda, etc.)
+- Transformations of random variables
+    - y=g(X) where X is cont. RV and g is strictly increasing function
+        - prob. mass in (a, b) gets moved to (g(a), g(b)) for all a, b
+            - pdf_y(y) = pdf_x(g^-1(y)) * (g^-1(y))'
+        - used for sampling from distribution: X ~ U(0, 1) -> transform -> get a sample from poisson
+        - chi-square pdf, Y = X^2 where X is gaussian
+        - Y := 1/X transforms gamma pdf to inverse-gamma (TODO: what is this?)
+- Multi Variate Gaussian
+    - X = A * W + mu
+        - W is D x 1 i.i.d gaussian rvs
+        - A is N x D matrix where D <= N
+    - p(w) = prod over i p(wi) = exp(-0.5 * w^T w) / (2pi)^(D/2)
+    - non-singular D x D matrix A (i.e A^-1 exists)
+        - C = AA^T, det(C) = det(A) * det(A^T) = (det(A))^2
+        - q(x) = exp(-0.5 * X^T C^-1 X) / ((2pi)^(D/2) * det(C) ^ 0.5)
+            - TODO: proof is quite complex but followable and very useful in understanding linear algebra for probability
+        - intuition: by SVD decomposition, A = rotation + scaling along axes
+    - covariance matrix
+        - column vector rv Y: C[Y] := E_Y[(Y - E[Y]) (Y - E[Y])^T], C_ij = covariance between Yi and Yj
+        - C = E[Y Y^T] - E[Y] (E[Y])^T
+            - symmetric and positive semi-definite
+    - E[X] = mu + A * E[W] = mu
+        - E[A * Y] = A * E[Y] for all Y by linearity of expectations
+    - Cov(X) = A A^T
+    - special cases
+        - A = R is an orthogonal matrix 
+            - R R^T = R^T R = I
+            - rows and columns of R are orthonormal vectors
+            - det(R) is either -1 or 1
+                - det(R) = +1 => rotation matrix
+                - det(R) = -1 => reflection or rotation + reflection
+            - Y = RW is also zero-mean isotropic multivariate gaussian
+        - A = S is a diagonal matrix with positive entries on diagonal
+            - Y = SW is zero mean anisotropic (axis-aligned) multivariate Gaussian
+        - A = RS -> zero mean rotation + reflection anisotropic
+    - eigen decomposition
+        - N x N square matrix A is diagonalizable if A = P D P^-1
+            - has n linearly independent (but not neccessarily orthogonal) eigen vectors
+        - invertible doesn't imply diagonalizable
+            - eg: A = [[1, 1], [0, 1]] is invertible but has only 1 eigen vector
+        - we need 1 more constraint: symmetric matrix
+        - **Spectral Theorem**: if A is N x N real symmetric matrix (like a covariance matrix) then A has N real eigenvalues and N real-value orthogonal eigenvectors
+        - N x N real symmetric positive (semi) definite matrix have eigen decomposition with all eigenvalues > 0 (>= 0)
+    - Y = A W + mu where A is any square invertible matrix matrix
+        - C = A A^T is SPD so C = Q D Q^T and C^-1 = Q D^-1 Q^T
+        - p(y) = exp(-0.5 * (y-mu)^T C^-1 (y-mu)) / ((2pi)^(D/2) * det(C) ^ 0.5)
+        - level sets are centered at mu and rotated + scaled
+    - What if A is N x N but non-invertible or A is M x N where M > N?
+        - this means some of the rvs are completely dependent on other ones so we should remove them from the analysis
+        - if A is M x N where M < N then we don't need so many i.i.d gaussians. We need to project to the M dimensional subspace within R^N that we are using and then proceed
+        - TODO: understand how to do this and get a resource that explains this
+    - marginals
+        - 1d marginals of multivariate gaussian are univariate gaussian
+        - any subset marginal of a multivariate gaussian is a multi variate gaussian
+        - marginal being gaussian doesn't imply that joint PDF is gaussian
+            - [Normally distributed and uncorrelated doesn't imply independence](https://en.wikipedia.org/wiki/Normally_distributed_and_uncorrelated_does_not_impl)
+                - X = standard normal, Y = X * (2B - 1) where B is Bernoulli
+    - conditional PDF, P(X1 | X2=x2), are multivariate gaussian where MVG X is partitioned into X1 and X2
+    - mahalanobis distance
+        - (y-mu)^T C^-1 (y-mu)
+        - generalizes euclidean distance in higher dimensions
+            - d(y, mu) = 0 iff y==mu
+            - d(y, mu) = d(mu, y)
+            - triangle inequality: d(x, y) <= d(x, z) + d(x, y)
+    - applications
+        - anomaly detection: fit a multi variate gaussian and identify points with very low probability
+        - classification: 
+            - fit MVGs on different class labels
+            - predict final label based on which MVG has higher likelihood for unclassified point
+    - PCA
+        - decompose covariance matrix, C = Q D Q^T, eigenvectors sorted by eigen values are principal components
+            - if we pick top-k principal components, then we get k-dimensional subspace that maximize total dispersion / variance
+                - Total dispersion/variance is empirical average of squared distance from mean
+        - Applications:
+            - dimensionality reduction: keep only required intrinsic dimensions
+        - [assumptions](https://stats.stackexchange.com/questions/134282/relationship-between-svd-and-pca-how-to-use-svd-to-perform-pca)
+            - data is centered around mean before decomposing covariance matrix
+            - data is normally distrubted
+                - TODO: find out what happens if this assumptions is broken in various ways
+        - [PCA with or without standardization gives different results](https://stats.stackexchange.com/questions/53/pca-on-correlation-or-covariance)
+            - correct approach depends on situation
+            - standardization is needed when features have different units (eg: kg v/s meters)
+    - **SVD**
+        - any real valued M x N matrix A can be broken as: A = U S V^T
+        - U and V are orthogonal matrices
+        - S is rectangular diagonal matrix with real and >= 0 values on diagonal
+        - [transformations](https://pressbooks.pub/linearalgebraandapplications/chapter/the-svd-theorem/#:~:text=To%20summarize%2C%20the%20SVD%20theorem,rotation%20in%20the%20output%20space.):
+            - rotation in input space
+            - scaling along axes that goes from input to output space
+            - rotation in output space
+        - [get low rank approximation of matrix](https://stats.stackexchange.com/questions/177102/what-is-the-intuition-behind-svd)
+            - A = sum_i s_i * u_i * v_i^T
+            - sum of rank-1 matrices
+            - pick top-k to get low rank approximation
+        - [Proof intuition](https://math.stackexchange.com/questions/2276374/strangs-proof-of-svd-and-intuition-behind-matrices-u-and-v)
+            - key idea in proof is to apply spectral theorem on A^T A
+        - [PCA and SVD comparison](https://stats.stackexchange.com/questions/134282/relationship-between-svd-and-pca-how-to-use-svd-to-perform-pca)
+            - PCA assumes gaussian distribution and the data is centered on origin
+            - Principal components are right eigen vectors of SVD
+            - SVD is more general than PCA (Ref: [link1](https://mathoverflow.net/questions/408504/listing-applications-of-the-svd))
+                - [Find nearest orthogonal matrix (to recover camera rotation matrix form noisy estimate)](https://mathoverflow.net/questions/86539/closest-3d-rotation-matrix-in-the-frobenius-norm-sense)
+                - [eigenfaces](https://en.wikipedia.org/wiki/Eigenface)
+                - [Latent semantic indexing](https://stats.stackexchange.com/questions/108156/understanding-singular-value-decomposition-in-the-context-of-lsi)
+- bayesian statistical analysis
+    - Posterior, P(X=x | Y=y) = Likelihood P(Y = y | X = x) * Prior P(X = x) / Evidence P(Y = y)
+        - both X and Y are discrete
+        - X is unknown parameter and Y is observed data
+        - alternative to MLE: maximum a posteriori (MAP) estimate
+            - good prior helps when sample size is small
+    - similar formulations exist for different combinations of X and Y being discrete / continuous (Ref: [link1](https://stats.stackexchange.com/questions/448020/does-bayes-theorem-apply-to-joint-distributions-of-discrete-and-continuous-rando))
+    - bayesian estimate theta* = arg min candidate_theta Risk(candidate_theta)
+        - Risk(candidate_theta) = expectation of loss function, L(candidate_theta | optimal_theta), under posterior distribution P(theta | Data, {x1, x2, ..., xn})
+            - posterior mean minimizes mean squared error loss function
+            - MAP estimate: argmax candidate_theta P(candidate_theta | x1, x2, ..., xn), minimizes expected 0/1 loss. Loss(candidate | optimal value) = 1 if candidate==optimal else 0
+            - median of posterior, P(candidate_theta | x1, x2, ..., xn), minimizes risk function using ebsolute error loss function 
+    - fisher information
+        - Question: when is parameter estimation easier and when is it hard?
+            - Quantify: how much information does a sample of data provide about the unknown parameter?
+        - if likelihood, P(data | theta) varies more sharply around MLE theta_true then theta_true is easy to estimate
+            - intuition: trying to estimate mean of a gaussian from sample is easy if gaussian variance is low
+        - formalizing intuitive notion of "spread of data around true theta"
+            - attempt-1: take expected derivative of log likelihood at true theta
+                - derivate at true theta will be high if likelihood spikes that true theta
+                - expectation turns out to be 0 as derivative is a signed function
+            - attempt-2: take expected *squared* derivative of log likelihood at true theta
+                - this give fisher information definition: I(theta_true) = E_{P(X|true_theta)}[( partial derivative of P(X | theta) at true theta )^2]
+                - this is same as negative expectation of 2nd order derivative of likelihood around true theta (proof in slides)
+                    - P(X | theta) can't be convex on true theta because true theta is a local (and global) maxima
+                        - so intuitively, 2nd derivative will always be negative (need to formalize this argument more)
+        - can be computed from definition for various classes of distributions (gaussian, binomial, etc.) and grows with some of the parameters
+    - TODO: cramer-rao lower bound, jeffreys prior, conjugate prior
+        
+    
+
+# References
+
+- Main reference: https://github.com/zestyoreo/iitb_courses/tree/main/CS215%20Data%20AI
