@@ -1,3 +1,7 @@
+# datasets
+aclImdb/
+*.tar.gz
+
 *.exe
 bin
 local

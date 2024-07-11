@@ -21,7 +21,7 @@ pair<tuple<int, int, double>, vector<int>> findClosestPairOfPoints(const vector<
     int p1=-1, p2=-1;
     double minDistance = numeric_limits<double>::max();
 
-    if((endIdx-startIdx+1) < 3) {
+    if((endIdx-startIdx+1) < 6) {
         for(int i=startIdx; i<=endIdx; i++) 
             idxSortedByY.push_back(idxSortedByX[i]);
         // base case. Compute things using brute force
