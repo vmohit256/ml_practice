@@ -1,0 +1,16 @@
+ipykernel==6.29.5
+matplotlib==3.9.1
+
+# instructions on tensorflow doc did not work out of the box. Following are hardcoded for tensorflow to work
+# https://www.tensorflow.org/install/pip#windows-native_1
+# According to doc, for instaling tensorflow with GPU support in windows native, we need to follow these steps before installing these packages
+# conda create --name tf python=3.9
+# conda deactivate
+# conda activate tf
+# conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
+
+tensorflow==2.10.1
+numpy==1.26.4
+tensorflow-hub==0.10.0
+tensorflow-datasets==4.8.0 # 2.1.0
+protobuf==3.19.6
