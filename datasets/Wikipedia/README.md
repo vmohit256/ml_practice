@@ -1,6 +1,24 @@
 # Introduction
 
-This directory contains code for parsing and analyzing wikipedia snapshots.
+This directory contains code for parsing and analyzing wikipedia snapshots. Code is structured as follows:
+
+1. extract_wiki_snapshot_summaries.ipynb
+    - it scans the full snapshot and extracts summary of a page that we care about: internal links, text length, categories, etc.
+    - it is cpu intensive and takes ~8 hours on a 8 core machine
+2. error_estimation.ipynb
+    - it samples a few pages and tries to estimate various kinds of errors in the processed summaries by comparing against the fresh wikipedia page fetched using wikipedia api
+3. prepare_structured_data.ipynb
+    - it prepares easy to consume structured data like tsv files, dfs/bfs analysis on category / page graphs, etc. 
+    - rest of the code uses this structured data only and not big json files created in previous steps
+
+# Known Issues
+
+1. Lots of internal links are present inside info boxes. These are not being parsed correctly right now. Eg: https://en.wikipedia.org/wiki/Chubby_Grigg
+2. Templates aren't expanded my parser. So some category pages have their parent category links broken. Eg: https://en.wikipedia.org/wiki/Category:20th-century_establishments_in_Chile
+    - this most commonly happens with categories having year in them
+
+These issues are quantified in error_estimation.ipynb
+
 
 # Planning
 
