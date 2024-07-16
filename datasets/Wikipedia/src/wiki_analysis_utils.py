@@ -144,7 +144,7 @@ def load_category_graph(data_root_dir, silent=False):
     child_graph_adj_lists = {}
     n_edges_loaded = 0
     start_time = time.time()
-    silent=False
+    
     for _, row in pd.read_csv(data_root_dir + 'category_id_to_parent_category_ids.tsv', 
                               sep='\t', dtype={'CategoryId': 'int32', 'ParentCategoryId': 'int32'}).iterrows():
         cid1 = row['CategoryId']

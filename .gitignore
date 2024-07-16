@@ -1,3 +1,5 @@
+metastore_db
+
 # datasets
 aclImdb/
 *.tar.gz
