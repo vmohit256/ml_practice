@@ -23,7 +23,7 @@
             - tokenizing too much: deep learning model would invest too much time in learning that most combinations are not useful and only some are useful. Given a sequence of characters like: 'n', 'e', 'w', ' ', 'y', 'o', 'r', 'k', there are catalan number of unique ways to split it. But only 3-4 are useful. So, the model would have to learn that most of the splits are not useful. This is a waste of time and resources.
             - tokenizing too little: if "to be or not to be" is a single token then it appears very infrequently in the corpus and so would have less data to learn its meaning. Eg: say the task is machine translation. The sentence "to be or not to be" appears only 2-3 times in training data with long translations. It will be difficult to learn exactly why it was translated that way with jus tthese samples. But, words like "to", "be", etc. appear a lot and their translation meaning could be generalized and useful for the bigger sentence "to be or not to be" as well.
     - Herdan/Heap's law: `V = k * N^b`
-        - for large corpus, `b` is between 0.67 and 0.75 sp vocab size grows fater than square root of corpus size
+        - for large corpus, `b` is between 0.67 and 0.75 sp vocab size grows faster than square root of corpus size
     - top-down (rule based)
         - simple lowercase, remove special characters, split on whitespace
         - nltk.regexp tokenize
@@ -110,7 +110,126 @@
         - Pcontinuation: I can’t see without my reading _. If bigram count is 0, then KONG (from HONG KONG) has more probability then glasses in unigram
             - P_KN(w_i | w_{i-1}) = max(count(w_{i-1}, w_i) - d, 0) / count(w_{i-1}) + lambda(w_{i-1}) * Pcontinuation(w_i)
 
+## Section-3: Text Classification
+
+- example applications: sentiment classification, spam detection, language identification, authorship attribution, assign topic/category to a document, part of speech tagging, entity detection
+    - period disambiguation, word tokenization
+    - emotion detection, word sense disambiguation, semantic role labelling
+- generative v/s discriminative classifiers
+    - discriminative tend to perform better and are more commonly used
+    - TODO: in which strictly classification scenarios would generative classifiers be better? Why not always use discriminative classifiers?
+- naive bayes
+    - P(c | doc) = P(doc | c) * P(c) / P(doc)
+    - P(doc | c) = P(w_1, w_2, ..., w_n | c) = P(w_1 | c) * P(w_2 | c) * ... * P(w_n | c)
+        - P(c) = count(c) / count(all docs)
+        - P(w | c) = count(w, c) / count(c)
+        - smooth probabilities of 0 probabilities in P(w | c)
+    - tips and tricks
+        - Binary Multinomial Naive Bayes: representing doc as simply a set of distinct words may work better than keep track of counts
+        - drop unknown words in test set
+        - removing stop words usually doesn't help in practice so they are mostly kept
+        - deal with negation (especially in sentiment analysis)
+            - didn't like this movie , but I -> didn't NOT_like NOT_this NOT_movie , but I
+                - works well in practice
+        - lexicon features: use of sentiment lexicons
+            - eg: counts of positive / negative words. Use predetermined lists of positive / negative words
+    - types of features
+        - word counts, word presence
+        - lexicon features (eg: lists of positive / negative words)
+        - non-textual features (eg: HTML text to image ratio in spam detection)
+        - spam detection
+            - Contains phrases of urgency like “urgent reply”
+            - All capital letters words in subject
+            - Claims you can be removed from the list
+        - character / sub-word level features
+            - language identification
+            - eg: classify if a word is name or not. Classify if a word is a location, pokemon, etc.
+    - interpretted as a language model: P(doc) = sum_c P(doc | c) * P(c)
+- classification metrics
+    - accuracy, precision, recall, F-alpha score
+    - harmonic mean is used because the harmonic mean of two values is closer to the minimum of the two values than the arithmetic mean is. Thus it weighs the lower of the two numbers more heavily, which is more conservative approach.
+    - multiclass classification
+        - macroaveraging
+            - obtain binary confusion matrix for each class separately
+            - compute metric (precision, recall, f1score, etc.) for each class separately
+            - take average of the metric to obtain the final metric
+        - microaveraging
+            - obtain binary confusion matrix for each class separately
+            - sum the confusion matrices
+            - compute metric (precision, recall, f1score, etc.) for the summed confusion matrix
+            - dilutes / hides performance on low sample count classes
+- hypothesis test to compare classifier model performance (TODO: add more rigous to this than the book does)
+    - why do we need it? Test set might be too small to infer if classifier A is better than B
+    - Effect size, Expected_delta(X) = M(A, X) - M(B, X)
+        - X is a random variable representing the test set 
+        - Random variable, M(A, X) is espected performance of system A on test set X
+            - it can be anything: accuracy, precision, recall, f1score, etc.
+        - x = our test set, delta(x) is observed effect size
+    - null hypothesis H0, Expected_delta(X) <= 0  // would like to reject this. Intuition: easier to reject it if observed effect size is large
+        - P(delta(X) >= delta(x) | H0 is true) = p-value
+        - if p-value is less than alpha (a small number like 0.01), then reject null hypothesis
+            - why? because the observed effect size is so large that it is extremely unlikely to have occured if the null hypothesis was true
+        - if p-value is greater than alpha, then fail to reject null hypothesis
+            - can't conclude anything in this case
+            - null hypothesis may be true or not true
+            - there simply isn't enough evidence to say anything
+            - we could've observe this effect size by random chance
+    - which hypothesis test to use?
+        - in NLP, we usually avoid parametric tests like t-tests, ANOVAs, etc. as they usually make assumptions about the data distribution which may not be true
+        - non-parametric tests are more common
+            - artifically create versions of test set to estimate p-value
+            - approximate randomization (TODO: read)
+            - bootstrap test
+                - bootstrapping: repeatedly drawing large numbers of samples with replacement (called bootstrap samples) from an original set
+                - only assumption: original sample is representative of the population
+                - original test set, x
+                - B(x) = {x_1, x_2, ..., x_B} is the bootstrap sample. x_i is a sample drawn with replacement from x. |x_i| = |x|
+                - expected delta(x_i) = delta(x)
+                - p-value = probability that observed delta on booststrap samples is greater than (oberserved delta on original test set) + (expected delta on bootstrap samples)
+                    = |{i: delta(x_i) >= delta(x) + delta(x)}| / B
+                - example: B = 10,000 so if p-value <= 0.01, then we can reject null hypothesis
+- logistic regression
+    - discriminative model. Directly model P(c|d) instead of modelling P(d|c) and P(c) separately
+    - P(y=1 | x) = sigmoid(w^T f(x) + b) = 1 - P(y=0 | x)
+    - features
+        - problem: classify is a period is a sentence terminator or not
+            - Is the word before the period a capitalized or not?
+            - brigram template: create a new feature for each bigram apearing before a period
+        - document as set / bag of words / ngrams (sklearn.feature_extraction.text)
+            - tf-idf
+            - vector similarity
+        - stop words 
+        - remove very rare / common words
+        - stemming / lemmatization (make features denser)
+        - part of speech tags
+        - various parts of scores of naive bayes classifier
+        - lexicons (or other features) built from external available datassources of matching domain
+            - https://www.nltk.org/api/nltk.corpus.html (switchboard, twitter, etc.) TODO: investigate different types of available data and their potential uses in building ML systems
+    - need to standard scale / normalize (in 0 to 1) features before running logistic regression
+    - can handle correlated features (unlike naive bayes)
+        - but naive bayes can work well on small datasets or short documents
+        - naive bayes is easy to implement and faster to train
+    - multiclass logistic regression
+        - one-vs-all: train a binary classifier for each class
+        - softmax: generalize logistic regression to multiple classes
+            - P(y=i | x) = exp(w_i^T f(x) + b_i) / sum_j exp(w_j^T f(x) + b_j)
+            - cross entropy loss: -sum_i y_i log(P(y=i | x))
+                - convex, so gradient descent will converge to global minimum
+    - regularization
+        - L1: Lasso
+        - L2: Ridge
+        - Elastic Net: L1 + L2
+        - early stopping
+        - dropout
+- alternative models for discriminative classifiers
+    - random forest
+    - gbt
+    - svm
+        
 
 # References
 
-- https://web.stanford.edu/~jurafsky/slp3/
+- [1] https://web.stanford.edu/~jurafsky/slp3/
+- [2] "Feature Engineering for Machine Learning: Principles and Techniques for Data Scientists" by Alice Zheng and Amanda Casari
+- [3] "Text Mining with R: A Tidy Approach" by Julia Silge and David Robinson
+- [4] "Applied Text Analysis with Python: Enabling Language-Aware Data Products with Machine Learning" by Benjamin Bengfort, Rebecca Bilbro, and Tony Ojeda
