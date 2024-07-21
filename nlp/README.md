@@ -1,5 +1,5 @@
 
-# Unstructured Notes
+# NLP Book Notes
 
 ## Section-1: Text Processing
 
@@ -221,11 +221,463 @@
         - Elastic Net: L1 + L2
         - early stopping
         - dropout
+    - using word embeddings
+        - tf-idf vector has |V| basis vectors (one for each word in the vocabulary). Document vector is a linear combination of these basis vectors
+        - replace these basis vectors with word embeddings to get document embeddings
+        - learn which direction in the document embedding space is best for classification
 - alternative models for discriminative classifiers
     - random forest
     - gbt
     - svm
         
+## Section-4: Vector Representations
+
+- distributional hypothesis
+    - words that appear in similar contexts have similar meanings
+- representation learning
+    - self-supervised methods (eg: predict the next word in a sentence, context words given a word, word given the context words)
+    - compared to painfully hand-crafted features
+- aspects of word meanings
+    - similarity (cat and dog), synonyms, antonyms (hot and cold), positive and negative (happy and sad), hypernyms (cat and animal), meronyms (finger and hand), etc.
+    - understanding of world (eg: buy, sell, pay -> If I buy something from you, you’ve probably sold it to me, and I likely paid you)
+    - word sense ("cat and mouse" v/s "keyboard and mouse")
+    - lemma-wordforms (mouse: mice, run: ran, sing: sung, sang)
+    - principle of contrast: difference in spelling -> difference in meaning (eg: H2O in scientific context v/s water in everyday context)
+    - relatedness / association (eg: coffee and cup, scalpel and surgeon)
+        - semantic field
+            - hospitals (surgeon, scalpel, nurse, anesthetic, hospital), restaurants (waiter, menu, plate, food, chef), or houses (door, roof, topic models kitchen, family, bed)
+            - Topic models: Latent Dirichlet Allocation (LDA), Non-negative Matrix Factorization (NMF)
+        - semantic frame: (in auction, buyer buys goods from seller by paying money)
+    - connotation: related to a writer or reader’s emotions, sentiment, opinions, or evaluations
+- term-document matrix
+    - Count[w][d] = number of times word w appears in document d
+    - encode document meaning as a column vector of this matrix
+        - use cosine similarity to find similar documents
+    - encode word meaning as a row vector of this matrix
+        - use cosine similarity to find similar words
+    - problems: high dimensionality, sparsity, doesn't capture word similarity 
+- term-term matrix
+    - Count[w1][w2] = number of times word w1 appears in same context as word w2
+    - context can be documents, sentences, paragraphs, etc.
+- tf-idf
+    - trade-off: 
+        - high frequency words in context are important to encode meaning
+        - uninformative ubiquitous words like "the", "a", etc. are not important but appear frequently
+    - approach-1: take log of term frequency
+    - approach-2: normalize term frequency by document frequency
+        - tf-idf(w, d) = tf(w, d) * idf(w)
+        - idf(w) = log(N / df(w))
+            - N is number of documents
+            - df(w) is number of documents containing word w
+- pointwise mutual information (PMI)
+    - PMI(w1, w2) = log(P(w1, w2) / (P(w1) * P(w2)))
+    - Negative PMI tends to be less reliable
+        - PPMI(w1, w2) = max(PMI(w1, w2), 0)
+    - problem: PMI is high for rare words that co-occur with other rare words
+        - solution: PMI_alpha(w1, w2) = log(P(w1, w2) / (P(w1) * P_alpha(w2)))
+            - P_alpha(w2) = count(w2) ^ alpha / Sum_w count(w) ^ alpha
+            - alpha = 0.75 is a common choice. Increases probability of rare words, hence reducing PMI for rare words
+    - document vector = centroid of word vectors (same as mean)
+        - use cosine similarity to find similar documents (information retrieval, news recommendation, plagiarism detection, etc.)
+- embeddings
+    - dense vectors (unlike sparse vectors in term-document matrix)
+        - work better than sparse vectors in practice in all tasks
+            - requires fewers parameters to learn
+            - captures similarity better 
+    - svd based methods [5]
+        - word-document matrix
+        - window based co-occurrence matrix
+        - both these embeddings encode semantic and syntactic information
+        - problems:
+            - matrix is very sparse and high dimensional
+            - quadratic cost of SVD makes it infeasible for large datasets
+            - requires hacks to account for term frequency imbalances
+            - matrix dimensions changes often
+        - iteration based methods solve these issues more elegantly
+    - word2vec
+        - static (instead of dynamic and contextual like in BERT)
+        - skip-gram with negative sampling (SGNS)
+            - (self-supervision) given a word, w, learn a classifier to distinguish between context words and noise words
+                - neural language model: predict next word given previous words in huge text
+            - context word pairs -> positive sample, random word pairs -> negative sample
+            - train logistic regression classifier and use weights as word embeddings
+            - P(+|w, c) = sigmoid(context_emb(w)^T target_emb(c))
+                - NOTE: two types of embeddings per word: as a context word and as a target word
+            - negative sampling details
+                - sample k negative words for each positive word
+                    - k=5-20 for small datasets, k=2-5 for large datasets
+                    - high k ensures that each words appears as a negative sample often. Else their target embeddings will be garbage
+                - sample negative words from weighted unigram, P_alpha(w2) = count(w2) ^ alpha / Sum_w count(w) ^ alpha
+                    - alpha = 0.75. Increases probability of rare words, or else we'll get a lot of "the", "a", etc. as negative samples
+            - Loss = -log(P(+|w, c)) - sum_{i=1}^k log(P(-|w, n_i))
+                = -log(sigmoid(context_emb(w)^T target_emb(c))) - sum_{i=1}^k log(sigmoid(-context_emb(w)^T target_emb(n_i)))
+                    - move context_emb(w) and target_emb(c) closer, and context_emb(w) and target_emb(n_i) farther
+                - gradients
+                    - dL/dtarget_emb(c) = context_emb(w) * (-1) * sigmoid' / sigmoid = (sigmoid(context_emb(w)^T target_emb(c)) - 1) * context_emb(w)
+                        - the more different context_emb(w) and target_emb(c) are, the more the gradient will be
+                    - dL/dtarget_emb(n_i) = sigmoid(context_emb(w)^T target_emb(n_i)) * context_emb(w)
+                        - the more same context_emb(w) and target_emb(n_i) are, the more the gradient will be
+                    - dL/dcontext_emb(w) = (sigmoid(context_emb(w)^T target_emb(c)) - 1) * target_emb(c) + sum_{i=1}^k sigmoid(context_emb(w)^T target_emb(n_i)) * target_emb(n_i)
+                        - with high k, we care more about the negative samples than the positive samples
+                    - gradient saturation is a non-issue
+            - start context and target embeddings randomly and apply gradient descent
+            - final word embedding
+                - context_emb(w) + target_emb(w)
+                - OR, throw away context embeddings and use target embeddings as word embeddings
+                - [How to combine context and target embeddings](https://datascience.stackexchange.com/questions/78055/word2vec-usefulness-of-context-vectors-in-classification)
+                    - context^T(w1) . target(w2) -> this is a useful metric of similar that we ultimately want
+                    - but. Can't keep two copies of embeddings for each word
+                    - context and target embeddings are in same semantic space so can keep only one to approximate context^T(w1) . target(w2) with context^T(w1) . context(w2)
+                    - average is also acceptable (and may even give a bit boost) but is again not as ideal as keeping both
+            - PROBLEMs 
+                - no good way to deal with unknown words
+                - sparsity due to rich morphology (eg: run, ran, running, etc.)
+                - each training run may produce very different embeddings. Best to run multiple times onf bootstrap samples and average the embeddings
+            - can be seen as implicitly optimizing a shifted version of PPMI. TODO: what?
+    - continuous bag of words (cbow) 
+        - predict the target word given the context words
+        - [Helpful intuition from this answer](https://ai.stackexchange.com/questions/18634/what-are-the-main-differences-between-skip-gram-and-continuous-bag-of-words)
+            - CBOW task is much simpler than the skip-gram task
+                - [original paper](https://arxiv.org/pdf/1301.3781) says CBOW took hours to converge while skip-gram took days
+                - CBOW is better at
+                    - syntactically equivalent words (eg: United States and USA)
+                - Skip-Gram is better at
+                    - semantically related words that are not similar (eg: coffee and cup)
+                    - less prone to overfitting frequent words. CBOW assigns high scores to frequent words
+        - TODO: read more
+    - fasttext ([Reference 1](https://amitness.com/posts/fasttext-embeddings)) ([Main Paper](https://arxiv.org/pdf/1607.04606))
+        - deals with OOV words, sparsity due to rich morphology
+            - allows for sharing embeddings across words, so helps with OOV words
+        - treat a word as a bag of character n-grams
+            - eg: "where" -> <wh, whe, her, ere, re>
+            - include all n-grams from 3 to 6 characters
+            - also include the full word as a special n-gram too
+        - number of n-grams can explode
+            - hashing: map n-grams to a fixed number of buckets (eg: 2 million used in the paper)
+        - uses skip-gram with negative sampling (SGNS) for training (TODO: why not cbow?)
+            - replace, context_emb(w)^T target_emb(c) -> subword_emb(w)^T target_emb(c)
+                - subword_emb(w) = sum of embeddings of all subword hashbuckets as described above
+                - subword information is not applied on target words (presumably due to efficiency reasons. Target vectors are probably thrown away. TODO: confirm this)
+        - experimental insights
+            - does better than word2vec on these
+                - syntactic tasks. cat:cats::dog:?
+                - morphologically rich languages (eg: Czech. German)
+                - does something meaningful for OOV words
+            - does worse than word2vec on these
+                - semantic tasks. man:king::woman:?
+                - 1.5 times slowers than regular skip-gram
+        - TODO: understand fast cpu based implementations of these word embeddings used in these papers
+    - glove TODO
+    - Semantic properties
+        - short context window -> syntactic relationships (same part of speech, similar syntactic role, etc.)
+            - window +- 2: Hogwarts -> Sunnydale, Evernight
+        - long context window -> topical relationships (but not similar in meaning)
+            - window +- 5: Hogwarts -> Dumbledore, Malfoy, Half-Blood
+        - first order co-occurrence: words that appear in contexts of each other
+        - second order co-occurrence: words that have similar contextual neighbors
+        - directions in embedding space may encode semantic properties like
+            - male-female: king-man+woman = queen
+            - country-capital: paris-france+germany = berlin
+            - comparative-superlative: good-better+bad = worse
+    - evaluation
+        - intrinsic
+            - hand annotated datasets of semantic similarity of words (eg: TOEFL dataset)
+            - hand annotated analogy task samples
+    - Hierarchical softmax ([word2vec paper](https://arxiv.org/pdf/1310.4546) [Reference blog 1](https://talbaumel.github.io/blog/softmax/) [Reference blog 2](https://leimao.github.io/article/Hierarchical-Softmax/))
+        - TODO: understand this. Not easy to understand. 
+            - Seems like the tree structure used affects the final accuracy. Bad tree structure can lead to bad accuracy
+            - also hacks like subsampling frequent words, negative sampling, etc. are used to make model more accurate and faster
+    - [Using word embeddings for text classification](https://arxiv.org/pdf/1607.01759)
+        - BoW + Linear classifier (logistic regression, svm, etc.) is a good baseline, but
+            - don't share features between multiple classes -> problem for low sample count classes
+        - Architecture
+            - average pool token embeddings
+                - use fastext subword tokens + n-grams (for contextual information) + hashing trick (to reduce vocab size)
+            - train k (or log(k)) logistic regression classifiers for k classes
+                - use hierarchical softmax for handling large number of classes
+                - TODO: not clear how hierarchical softmax works
+
+## Section-5: Neural Networks in NLP and Neural Language Models
+
+- neural networks
+    - key advantage: automatically learn useful representations through back propagation. So no need for feature engineering
+    - need non-linearity and depth to learn complex non-linear functions
+        - eg: xor function doesn't have linear decision boundary
+    - activation functions
+        - sigmoid, tanh, relu, leaky relu, elu, selu, softmax
+            - sigmoid is not used often in deep networks due to vanishing gradient problem
+            - tanh(x) = 2 * sigmoid(2x) - 1 is very similar to sigmoid and is almost always better
+                - it too has vanishing gradient problem though
+            - relu is most commonly used
+    - multi-layer perceptron
+        - hidden layer, hidden units, fully connected
+            - h = activation(Wx + b)
+        - output layer
+            - y = softmax(Wx + b)
+        - 2-layer network example
+            - h = g(Wx + b)  // don't count input layer in numbering
+            - z = Uh  // layer-1
+            - y = softmax(z)  // layer-2
+- Neural Networks for Classification
+    - 2-layer newtrok with hand crafted features
+        - x in R_n (n features) are hand-crafted features
+        - h = g(Wx + b)
+        - z = Uh  // like k logistic regression classifiers for k classes
+        - y = softmax(z)
+    - represent words as embeddings
+        - 2-layer pooling based network
+            - x = pooling(enb(x_1), emb(x_2), ..., emb(x_n))
+                - pooling can be average, sum, max, etc.
+            - h = g(Wx + b)
+            - z = Uh
+            - y = softmax(z)
+            - embeddings can be learned from scratch or pretrained
+                - pretraining (TODO: try different approaches on sample tasks sentiment analysis and product category classification and see which works best)
+                    - initialize embeddings with word2vec, fasttext, glove, etc. and fine-tune for the task
+                    - make embeddings static (don't update them during training)
+                        - once the logistic regression classifier is trained, make the embeddings tunable and train the whole network again
+    - cross entropy loss
+        - Binary cross entropy loss, L(y_pred, y_true) = -(y_true * log(y_pred) + (1 - y_true) * log(1 - y_pred)) = negative log likelihood
+    - backpropagation
+        - vanishing gradient problem on 2-layer networks
+            - h = g(Wx + b), z = Uh, y_pred = softmax(z)
+            - dL / dW = dL / dy_pred * dy_pred / dz * dz / dh * dh / dW
+                - say Wx+b is very high and g is sigmoid. Then dh/dW vanishes and hence dL/dW vanishes
+                - dh / dW = sigmoid'(Wx+b) * x = sigmoid(Wx+b) * (1 - sigmoid(Wx+b)) * x
+                    - if Wx+b is very high/very low, either sigmoid(Wx+b) or (1 - sigmoid(Wx+b)) will be close to 0
+    - optimization tricks
+        - initialize with small random weights
+        - normalize input features to have mean 0 and variance 1
+        - regularization techniques
+            - drop out (randomly set some activations to 0 during training)
+            - L1, L2 regularization
+            - early stopping
+            - batch normalization ([Reference blog 1](https://towardsdatascience.com/batch-normalization-in-3-levels-of-understanding-14c2da90a338))
+                - it makes training faster and stable, allows for wide range of learning rates, no final accuracy drop, etc.
+                - almost always makes deep networks better
+                    - sigmoid based activations got same performance as relu based activations in an experiment with batch normalization
+                - TODO: understand, implement, and study this on a deep architecture (eg: image net, mnist, etc.) and develop an intuition for why this works
+                    - understand hypothesis for why it works and some ways to test them
+                        - BN reduces internal covariate shift
+                        - BN mitigates interdependency between hidden layers during training
+                        - BN makes the optimization landscape smoother
+        - hyperparameter tuning
+            - learning rate, batch size, number of hidden units, number of hidden layers, etc.
+            - grid search, random search, bayesian optimization
+- Neural Language Models (TODO: train neural language models on toy datasets and compare with ngram language models)
+    - Many advantages over ngram language models
+        - can capture long range dependencies
+        - can capture semantic similarity, syntactic similarity, etc. (all the things word embeddings can capture)
+        - can generalize to unseen contexts:
+            - training has: I have to make sure that the cat gets fed
+            - test has: I forgot to make sure that the dog gets _
+                - bigram dog gets has 0 probability in training data but cat and dog have similar word embeddings
+    - Much more complex than ngram language models. If ngram works for the problem then use ngram instead
+    - architecture:
+        - task is to model: P(w_i | w_{i-1}, w_{i-2}, ..., w_{i-k}) (same as ngram language model)
+        - example for k=3
+            - convert w1, w2, w3 -> e1, e2, e3 (embeddings)
+            - h = g(W1 e1 + W2 e2 + W3 e3 + b)
+            - z = Uh
+            - y = softmax(z)
+    - training
+        - self-supervision
+            - embeddings can be learned from scratch or intialized (and frozen) pretrained embeddings can be used
+        - input a very long text, concatenating all the sentences, starting with random weights, and then iteratively moving through the text predicting each word w
+
+## Section-6: Sequence Labeling for Parts of Speech and Named Entities
+
+- sequence labeling
+    - assign a label to each word in a sequence
+    - eg: POS tagging, NER, trigger word detection, etc.
+    - generative models: HMM,
+    - Discriminative models: CRF
+    - neural models: Transformer, RNN, LSTM, etc.
+- part-of-speech tagging (POS)
+    - survived 2000 years without much change so must be useful
+    - noun, verb, adjective, adverb, pronoun, preposition, conjunction, interjection
+        - noun: person, place, thing. Eg: cat, dog, table, usa, etc.
+            - common noun: cat, mango, algorithm, pacing, etc.
+            - count nount (goat/goats, friend/friends, etc.), mass noun (water, air, etc.)
+            - proper noun: names of specific people, places, etc. Eg: John, New York, etc.
+        - verb: action. Eg: run, jump, eat, etc.
+            - phrasal verb: verb + particle. Eg: run into, run over, etc.
+                - particle: preposition or adverb that follows the verb: run into, run over, etc.
+            - auxiliary verb: mark semantic features of a main verb such as its tense. Eg: is, are, was, were, etc.
+                - modal: marks mood or attitude. Eg: can, could, may, might, must, shall, should, will, would, etc.
+                - copula: links the subject of a sentence to a subject complement. Eg: is, are, was, were, etc.
+        - adjective: describes a noun. Eg: big, small, red, blue, etc.
+        - adverb: describes a verb. Eg: quickly, slowly, etc.
+            - very loosely defined
+            - directional / locative (home, here, downhill), degree (very, somewhat, etc.), manner (quickly, slowly, etc.), frequency (always, never, etc.), time (now, yesterday, etc.), etc.
+        - pronoun: replaces a noun for efficiency. Eg: he, she, it, etc.
+            - personal: I, you, he, she, it, we, they, etc.
+            - possessive: mine, yours, his, hers, its, ours, theirs, etc.
+            - wh: who, whom, whose, which, what, etc.
+        - preposition: shows relationship between a noun and another word. Eg: in, on, at, etc.
+            - spatial (in, on, at, etc.), temporal (before, after, etc.), directional (to, from, etc.), agency (by, with, etc.), etc.
+        - conjunction: joins words, phrases, or clauses. Eg: and, but, or, etc.
+            - coordinating (and, but, or, etc.): joins words, phrases, or clauses of equal importance
+            - subordinating (because, although, etc.): joins a dependent clause to an independent clause
+                - complementizer: that, if, etc.
+        - interjection: expresses emotion. Eg: wow, ouch, oh, umm, etc.
+            - small open class
+            - greetings (hello, hi, etc.), exclamations (wow, ouch, etc.), question responses (yes, no, uh-huh), etc.
+        - determiner: introduces a noun. Eg: a, an, the, this, that, etc.
+    - gives information about the word and its context
+        - likely neighbors: adjective before a noun, verb after a pronoun, etc.
+        - syntactic role: subject, object, etc.
+    - disambiguation task
+        - words are ambiguous: "mouse" can be a computer mouse or a rodent
+    - Very easy problem
+        - most algorithms (HMM, CRF, BERT) perform at human level accuracy (97-98%) in English
+        - most word types (~85%) are unambiguous (eg: "Janet" is a proper noun)
+        - ambiguous word types (~15%) account for 50-60% words
+            - most are easy to disambiguate from context (eg: "I saw a mouse" v/s "Let me fetch my saw")
+        - simple bsaeline: assign most frequent POS tag to each word
+            - has 92% accuracy
+- open vs closed class words
+    - open class words: nouns, verbs, adjectives, adverbs, etc.
+    - closed class words: pronouns, prepositions, conjunctions, interjections, etc.
+        - short, frequent, function words
+- Named entity recognition (NER)
+    - person, organization, location, date, time, money, percent, facility, geo-political entity, etc.
+    - eg: "I am going to New York tomorrow" -> "I am going to [LOCATION] tomorrow"
+    - useful for question answering, information extraction, stance detection, etc.
+        - sentiment analysis (w.r.t. a particular entity)
+        - extract events, relationships, etc.
+        - link unstructured text to structured data like knowledge bases, wikipedia, etc.
+    - tag spans of text with: PER (person), ORG (organization), LOC (location), GPE (geo-political entity)
+        - decide where word boundaries are
+        - ambiguity ('JFK' can be a person or a locstion / airport)
+        - BIO (Begin, Inside, Outside) tagging
+            - IO (Inside, Outside), BIOES (Begin, Inside, Outside, End, Single)
+- Hidden Markov Model (HMM)
+    - generative model
+    - components
+        - markov chain for hidden states (POS tags, NER tags, etc.)
+            - state transition graph
+            - initial state probabilities
+        - observation likelihoods / emission probabilities for each state (word given state)
+        - assumptions:
+            - first order markov assumption: P(s_i | s_{i-1}, s_{i-2}, ..., s_1) = P(s_i | s_{i-1}) 
+            - output independence assumption: P(w_i | s_i to s_1, w_{i-1}, w_{i-2}, ..., w_1) = P(w_i | s_i)
+    - parameter estimation
+        - MLE: count based
+            - P(w_i | s_i) = count(w_i, s_i) / count(s_i)
+    - decoding
+        - given a sequence of observed outputs (words), find the most likely sequence of hidden states (POS tags)
+            - argmax s P(s | w) = argmax s P(w | s) P(s) 
+                = argmax s P(w_1 | s_1) P(s_1) P(w_2 | s_2) P(s_2 | s_1) ... P(w_n | s_n) P(s_n | s_{n-1})
+            - Viterbi algorithm: maintain DP[t][j] = max P(s_1, s_2, ..., s_t = j, w_1, w_2, ..., w_t)
+    - bunch of problems
+        - unknown words (eg: novel unseen nouns with undefined probabilities)
+- Conditional Random Fields (CRF)
+    - discriminative model
+    - linear chain CRF 
+        - estimate P(s | w) directly
+        - P(s | w) = exp(sum_k w_k F_k(s, w)) / Z(w)
+            - F_k(s, w) is a global feature function
+            - Z(w) is a normalization constant
+        - linear chain CRF
+            - F_k(s, w) = sum_i f_k(s_i, s_{i-1}, w, i)
+                - f_k(s_i, s_{i-1}, w, i) is a local feature function
+                - eg: f_k(s_i, s_{i-1}, w, i) = 1 if s_i = noun and s_{i-1} = verb and w_i = "run" else 0
+                - feature templates:
+                    - pick commonly occuring combos of: < y_i, x_i >, < y_i, y_{i-1} >, < y_i, x_i, x_{i-1} >, etc.
+                - word shape features
+                    - capitalization, digit, hyphen, etc.
+                    - X.X.X., Xx, Xd-d, XXdd-dd, etc.
+                    - suffix like -ly, -ing, -ed, etc.
+                    - prefix like un-, re-, etc.
+                    - short word, long word, etc.
+                - especially important for NER: gazetteer, name-list
+            - this allows for using viterbi algorithm for decoding
+                - general CRF without this assumption require complex decoding and are rarely used
+            - training same as logistic regression
+        - inference
+            - s* = argmax_s P(s | w) = argmax_s exp(sum_k w_k F_k(s, w)) / Z(w)
+                = argmax_s sum_k w_k F_k(s, w)
+                = argmax_s sum_k w_k sum_i f_k(s_i, s_{i-1}, w, i)
+                = argmax_s sum_i sum_k w_k f_k(s_i, s_{i-1}, w, i)
+            - can be solved using viterbi / DP algorithm
+- metrics
+    - POS tagging: accuracy
+    - NER: F1 score
+
+## Section-7: RNNs and LSTMs
+
+- RNN
+    - h_t = g(Wx_t + Uh_{t-1} + b)  // kind of like HMM but with continuous hidden states
+    - y_t = softmax(Vh_t + c)
+    - backpropagation through time (BPTT)
+        - forward pass: compute h_t, y_t, loss
+        - backward pass: compute gradients, update weights
+    - language modelling
+        - e_t = E w_t  // d_u x 1 = d_u x V * V x 1 
+        - h_t = g(W e_t + U h_{t-1} + b)  // d_h x 1 = d_h x d_u * d_u x 1 + d_h x d_h * d_h x 1 + d_h x 1 
+        - y_t = softmax(V h_t + c)  // V x 1 = V x d_h + V x 1
+        - P(w_t+1 | w_{t}, w_{t-1}, ..., w_1) = softmax(y_t)
+        - cross entropy loss: -sum_i log(P(w_i = observed_w i | w_{i-1}, w_{i-2}, ..., w_1))
+        - training
+            - self-supervision: predict next word given previous words
+            - teacher forcing: use true previous words to predict next word
+                - in h_i = g(W w_i + U h_{i-1} + b), use actual w_{i-1} instead of predicted w_{i-1} from previous step
+                - TODO: why exactly?
+            - Weight tying
+                - make the input embeddings and emitter / output embeddings matrix same since the inputs and outputs are in the same space only
+                    - e_t = E w_t
+                    - h_t = g(W e_t + U h_{t-1} + b)
+                    - y_t = softmax(E h_t + c)
+                - reduces number of parameters significantly
+                - boosts model performance
+    - sequence labelling
+        - final softmax is over target labels. No teacher forcing and no weight tying
+    - sequence classification
+        - remove intermediate output tokens and keep a feed forward network and softmax on last hidden layer output only
+            - e_t = E w_t  // d_u x 1 = d_u x V * V x 1 
+            - h_t = g(W e_t + U h_{t-1} + b)  // d_h x 1 = d_h x d_u * d_u x 1 + d_h x d_h * d_h x 1 + d_h x 1 
+            - y = softmax(V h_T + c)
+            - instead of h_T, use some sort of pooling (average, element wise max, etc.) of h_1 to h_T
+                - TODO: when to use which?
+    - text generation
+        - initialize h_1
+            - either use last hidden state from some contextual text (eg: text summarization task)
+            - or start from the start token
+        - forward propagation and sample on each step. Feed output from previous step into generation for next step
+    - stacked RNN
+        - feed output of 1 RNN as input to another
+        - usually performs better than single layer RNN
+    - bidirectionary RNN
+        - applicable when we have access to the entire sequence right away. eg: POS tagging, NER, classification, etc.
+        - combine two disconnected rnn: one with inputs left to right and another with inputs right to left
+            - different ways to combine: concatenate, sum, mean, etc.
+        - shown to work well for sequence classification tasks
+            - problem (in unidirectional sequence classification): final hidden state is bias towards the end of the sequence
+                - bidirectional RNN solves it by combining final hidden state of forward and backward RNNs
+- LSTM
+    - vanilla RNNs tend to not capture long range dependencies well
+        - difficult task because hidden state does two task simultaneously: predict current word and remember past words
+        - vanishing gradient problem
+            - multiple multiplications make gradient contribution for far away words very small
+        - TODO: find papers that analyze this
+    - architecture
+        - decouple output emitting hidden state and context vector
+            - maintain context vector
+            - use context vector to obtain hidden vector, which is used to output
+        - in each step
+            - build current context from previous context
+                - first forget some information from previous context using forget gate
+                - then add some new information based on the current input using add gate
+                - combine the two to obtain the current context
+            - use output gate to select information from current context
+            - emit output based on the hidden state
+        - Forget gate, f_t = sigmoid(U_f h_{t-1} + W_f x_t)   // why use h_{t-1} and not c_{t-1}?
+            - p_t = c_{t-1} * f_t  // preserved context
+        - Add gate, a_t = sigmoid(U_a h_{t-1} + W_a x_t)
+            - q_t = tanh(U_q h_{t-1} + W_q x_t)  // new context
+
+
 
 # References
 
@@ -233,3 +685,4 @@
 - [2] "Feature Engineering for Machine Learning: Principles and Techniques for Data Scientists" by Alice Zheng and Amanda Casari
 - [3] "Text Mining with R: A Tidy Approach" by Julia Silge and David Robinson
 - [4] "Applied Text Analysis with Python: Enabling Language-Aware Data Products with Machine Learning" by Benjamin Bengfort, Rebecca Bilbro, and Tony Ojeda
+- [5] CS 224D: Deep Learning for NLP [notes](http://cs224d.stanford.edu/lecture_notes/notes1.pdf) [notes](https://cs224d.stanford.edu/lecture_notes/LectureNotes2.pdf)
