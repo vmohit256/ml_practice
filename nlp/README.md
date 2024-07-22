@@ -623,7 +623,8 @@
             - self-supervision: predict next word given previous words
             - teacher forcing: use true previous words to predict next word
                 - in h_i = g(W w_i + U h_{i-1} + b), use actual w_{i-1} instead of predicted w_{i-1} from previous step
-                - TODO: why exactly?
+                - it is done to stabilize training
+                - TODO: won't this affect text generation as the errors will accumulate? Read more on why this is done.
             - Weight tying
                 - make the input embeddings and emitter / output embeddings matrix same since the inputs and outputs are in the same space only
                     - e_t = E w_t
@@ -673,10 +674,243 @@
             - use output gate to select information from current context
             - emit output based on the hidden state
         - Forget gate, f_t = sigmoid(U_f h_{t-1} + W_f x_t)   // why use h_{t-1} and not c_{t-1}?
-            - p_t = c_{t-1} * f_t  // preserved context
-        - Add gate, a_t = sigmoid(U_a h_{t-1} + W_a x_t)
-            - q_t = tanh(U_q h_{t-1} + W_q x_t)  // new context
+            - p_t = c_{t-1} . f_t  // preserved context. "." is element wise multiplication
+        - Add gate, a_t = sigmoid(U_a h_{t-1} + W_a x_t) 
+            - e_t = tanh(U_e h_{t-1} + W_e x_t)  // new context
+            - ae_t = a_t . e_t    // new information to add to context. "." is element wise multiplication
+        - Current context, c_t = p_t + ae_t
+        - Output gate, o_t = sigmoid(U_o h_{t-1} + W_o x_t)
+            - h_t = o_t . tanh(c_t)  // hidden state
+        - y_t = softmax(V h_t + b)  // output
+    - all principles of RNNs are applicable as-is to LSTM because the changes are within a cell only
+        - LSTM tends to perform better than vanilla RNNs in practice and is default choice for RNN-based architectures
+- Encoder-Decoder architecture
+    - used for seq2seq tasks like machine translation, summarization, question answering, dialog, etc.
+        - output sequence don't have 1:1 correspondence with input sequence and can be longer / shorter
+    - encoder: RNN / LSTM
+        - input sequence -> context vector (last hidden state)
+    - decoder: RNN / LSTM
+        - context vector -> output sequence 
+            - context vector is concatenated with the input at each step to prevent it from diluting due to vanishing gradient problem
+        - decoder works exactly like a RNN language model (teacher forcing, weight tying, etc.)
+- Attention mechanism
+    - problem with encoder-decoder architecture
+        - encoder context vector is a bottleneck and has to capture all information from the input sequence
+        - this is difficult for long sequences
+    - replace static context vector with dynamic context vector 
+        - weighted average of encoder hidden states
+        - different weighted average for each output token in decoder
+    - at step i in decoder
+        - score(hd_{i-1}, he_j) = hd_{i-1} . he_j
+            - option-2: score(hd_{i-1}, he_j) = hd_{i-1} . W_a . he_j  // this allows for different dimensions for hidden states in encoder and decoder
+        - attention = softmax(score) // over all j
+        - context = sum_j attention_j * he_j
 
+## Section-8: Transformers and Large Language Models
+
+- people acquire lots of knowledge very rapidly as they age but use only a small fraction of it in their daily lives
+    - "How much do we know at any time? Much more, or so I believe, than we know we know." -Agatha Christie, The Moving Finger
+    - Vocab size of an american english speaking 20 year old is ~50,000 words (50000 / (365 * 20) = 6.8 words per day)
+        - but use ~2000 words actively in daily life
+    - students learn a lot of information in school, university, etc. that is not actively used in daily life
+    - this observation is one of the motivation of "distributional hypothesis"
+        - learn enough so that it becomes possible to know about a word from its context, without any real world knowledge of the word
+    - LLMs
+        - uses self-attention (derived from attention mechanism) 
+            - build contextual representations of a word’s meaning that integrate information from surrounding words [6]
+        - shows remarkable performance on a wide range of NLP tasks (because of knowledge in pretraining)
+            - especially in text generation tasks: summarization, translation, question answering, chatbots
+            - almost any NLP task can be modeled as next word prediction: text classification (sentiemnt analysis, spam detection, etc.), sequence labelling (POS tagging, NER, etc.), etc.
+                - Sentiment classification: The sentiment of the sentence "I like Jackie Chan" is: ____
+                - Question answering: Q: Who wrote the book ‘‘The Origin of Species"? A: ____
+- Transformers
+    - intuition
+        - sequence of contextual embeddings representing contextual meaning for each word in the input sequence (TODO: try to observe this in an actual pretrained model. Does an something like the animation of word embedding transformation from [6] actually happen?)
+            - I walked along the *pond*, and noticed that one of the trees along the *bank* had fallen into the *water* after the storm.
+                - update contextual embeddings for bank to be more similar to pond and water than to money based on contextual words "pond" and "water"
+            - The *keys* to the cabinet *are* on the table
+                - words like *are* are quite ambiguous without context so these should change more than nouns like USA (TODO: verify this on real data)
+        - causal or backward looking or autoregressive self-attention
+            - GPT is unidirectional like this, but BERT is bidirectional
+            - computation for each step is independent of the other steps (within a layer)
+                - a layer can be parallely computed (unlike RNNs)
+    - causal self-attention layer
+        - input: x_1, x_2, ..., x_n, output: a_1, a_2, ..., a_n  
+            - a_i is attention weighted sum of all x_j's that come before x_i (j<=i)
+        - version-1:
+            - score(x_i, x_j) = x_i . x_j  // TODO: why is x_i the key? x_i is simply the previous word. Why is it so privileged that we're deciding attention based on it only?
+            - alpha_ij = softmax(score(x_i, x_j)), for all j<=i
+            - a_i = sum_j alpha_ij * x_j, for all j<=i
+        - version-2:
+            - break down the roles played by x_i, x_j (just like how LSTM separates forget, add, and output gates)
+                - query: in version-1, x_i acts as a query when computing alpha_ij = softmax(score(x_i, x_j)), for all j<=i
+                    - q_i = W_q x_i
+                - key: in version-1, x_j acts as a key, that is compared against a query, when computing alpha_ij = softmax(score(x_i, x_j)), for all j<=i
+                    - k_j = W_k x_j
+                - value: in version-1, x_j acts as a value, that is weighted by the attention score, when computing a_i = sum_j alpha_ij * x_j
+                    - v_j = W_v x_j
+                - instead of using input vectors as it is for all three roles, use different linear transformations of it for different roles
+                    - TODO: eigen values and eigen vectors of W_q, W_k, W_v define which dimensions in the input vector embedding space are important for query, key, and value roles respectively. Study this in an actual model
+                        - in logistic regession, weight vector is kind of a filter that identifies the most important dimensions in the input vector space
+                            - this is similar to filter like role played by a convolutional kernel in a CNN
+                        - a fully connected layer, h = Wx, is a linear transformation from input space to output space
+                            - sub-space spanned by small eigen values of W is squished into non-exitence and is not utilized in the output space
+                            - sub-space spanned by large eigen values of W is stretched and is utilized more in the output space
+                            - study eigen values of learned W to understand what the model is doing. Are there only a few large eigen values? Are there many small eigen values?
+                                - most activations act as a gate and only keep big positive values and discards negative values
+                                    - this means direction of eigen vectors also matter
+                                    - a matrix is like a high-pass conv filter that detects 0/1 OR dot product between input vector and eigen vectors
+                                - just like how logistic regression finds the single most predictive direction in the embedding space, a fully connected layer finds weighted set of most predictive directions (like eigenfaces, pca, nmf, etc.)
+                            - imagine training a deep fully connected network (without activations) represented by matrices: W1 -> W2 -> W3 -> W4
+                                - how is it different from logistic regression?
+                                - W1 discards some directions and amplifies some directions
+                                    - logistic regression is extreme case of this where only one direction is amplified and rest all are discarded
+                                - W2, W3, W4 do the same thing slowly and converge to the direction that logistic regression would have converged to
+                                - now say we add activations between W1, W2, W3, W4
+                                    - each activation throws away negative half of the direction it keeps and both halves of the direction it throws away
+                                - each layer necessarily discards information
+                                    - so add residual connections to pass information through
+                                - a deep fc network can do this
+                                    - discard complex non-linear decision boundaries
+                                    - zoom in on particular areas of the input space to make them more high resolution
+            - score(x_i, x_j) = q_i . k_j / sqrt(d_k)  // d_k is the dimension of the key vector. Needed because the scale blow-up in high dimensions will skew the softmax
+            - alpha_ij = softmax(score(x_i, x_j)), for all j<=i
+            - a_i = sum_j alpha_ij * v_j, for all j<=i
+        - parallelizing for efficient GPU implementation
+            - X is N x d  // N = number of vectors in sequence, d = embedding dimension
+            - Q = X W_Q is N x d_k  // W_Q is d x d_k where d_k is key dimension
+            - K = X W_K is N x d_k  // W_K is d x d_k 
+            - V = X W_V is N x d_v  // W_V is d x d_v where d_v is value dimension
+            - M = Q K^T / sqrt(d_k) is N x N  // M_ij = Q_i . K_j / sqrt(d_k) = alpha_ij
+            - M = M + INF_UPPER_TRIANGULAR  // set upper triangular to -inf to prevent attending to future words
+            - A = SelfAttention(Q, K, V) = softmax(M) V is N x d_v  // A_i = sum_j alpha_ij * V_j
+        - multi-head attention
+            - like multiple CNN filters
+            - head_i = SelfAttention(Q_i, K_i, V_i) 
+            - A = MultiHeadAttention(X) = Concat(head_1, head_2, ..., head_h) W_o  // W_o is h * d_v x d
+                - W_o converts h * d_v to d dimensions to match the input dimension
+    - transformer block
+        - standard design
+            - MultiHeadAttention
+            - Residual connection  // simply add the input of a layer to its output to pass information from lower layers to higher layers
+            - Layer Normalization
+            - Feed Forward Network
+                - computed parallelly for each position
+                - fully-connected 2-layer network
+                - X_i is d x 1 // input to the feed forward network
+                - L1_i = activation(W1 X_i + b1) is d_ff x 1 // W1 and b1 are shared across all positions i
+                    - d_ff is often higher dimension than d (eg: d = 512, d_ff = 2048)
+                    - TODA: why? all this is quite mysterious
+                - L2_i = activation(W2 L1_i + b2) is d x 1 // W2 and b2 are shared across all positions i
+                - same weights for each position but different weights for each layer
+                - TODO: why do this? What is this layer doing?
+            - Residual connection
+            - Layer Normalization
+                - improves training of deep networks
+                    - keeps the layer outputs in a range that facilitates gradient-based training
+                - x is d x 1 // input to the layer normalization is a vector output at a position
+                - standard_scaled(x) = (x - mean(x)) / sqrt(var(x) + epsilon)  // epsilon is a small number to prevent division by zero
+                - LayerNorm(x) = standard_scaled(x) * gamma + beta  // gamma and beta are learned parameters
+                - TODO: learn more about what this is
+            - pre-normalization
+                - add another layer normalization before the first multi-head attention
+                    - equivalently, add layer normalization before multi-head attention in each layer and add one more layer normalization after the last residual conection after the last feed forward network
+        - stack multiple transformer blocks
+            - input and output of each block is same dimension for this purpose
+            - T5, GPT 3-small -> 12 layers
+            - GPT 3-large -> 96 layers
+    - residual stream view
+        - track a token's path from input to output
+            - t_0 = x_i // input token embedding
+            - t_1 = x_i + MultiHeadAttention(x_i) // attention output
+                - this is the only place where the token interacts with the other (previous) tokens
+            - t_2 = LayerNorm(t_1) // layer normalization
+            - t_3 = FeedForward(t_2) // feed forward output
+            - t_4 = t_2 + t_3 // residual connection
+            - t_5 = LayerNorm(t_4) // layer normalization
+        - resdiual stream transforms the current token embedding to the next token embedding step-by-step
+            - TODO: would be interesting to visualize this on an actual model
+    - input embeddings (token + position)
+        - embedding matrix, E is V x d  // V = vocab size, d = embedding dimension
+        - positional embeddings methods
+            - firstly, why we need positional embeddings
+                - transformer doesn't have any notion of order of words in the input sequence so it cannot leverage inherent structure in the language that is based on word order
+                    - example: because of how english works, attention should bias more toward close context words, instead of far away words, for the most part unless there is a specific reason to do otherwise
+                    - without positional embeddings, the model would not even have any input from which to learn this bias
+                    - so may be next word prediction is impossible / senseless without providing positional information in the input
+            - intuitively, it should not require lots of dimensions. Only log(S) bits are needed where S is the sequence length
+            - absolute position (simplest)
+                - matrix, P is S x d  // S = max sequence length, d = embedding dimension
+                    - P_i is d x 1 embedding for position i. Similar to how E["fish"] is d x 1 embedding for word "fish"
+                - input matrix, X is S x d  // S = max sequence length, d = embedding dimension
+                    - X_i = E[w_i] + P_i  // E[w_i] is d x 1 embedding for word w_i
+                - problem: training data would have more examples of shorter sequences than longer sequences
+                - GPT folows this (presumably because they have lots of data for each sequence length)
+                    - although P_i is d dimensional, its intrinsic dimension is much lower as not much information is needed to represent a position
+                    - [GPT-2 learned positional embeddings that look like helix](https://www.lesswrong.com/posts/qvWP3aBDBaqXvPNhS/gpt-2-s-positional-embedding-matrix-is-a-helix)
+                        - first few positions differ from the helix pattern 
+                        - TODO: form an hypothesis for why this is. Look at 3d PCA of openly available LLMs. Compare it with the fixed sin-cosine positional embeddings used by original paper. Are they both equivalent?
+            - fixed position (sinusoidal) ([Ref blog 1](https://kazemnejad.com/blog/transformer_architecture_positional_encoding/) [Attention paper](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf))
+                - a non-learnable fixed hand crafted vector per position
+                - its like binary encoding of the position number except in float using sin-cos of geometrically varying frequencies
+                - P_{pos+k} can be obtained from P_k using a linear transformation so the model should be able to learn this matrix
+                - original paper found that the final model performance didn't change much with this as compared to absolute position embeddings
+    - Language modelling head
+        - head: final layer that predicts the next word (or does any other task we want to do like classification)
+        - input, h^L_N is 1 x d last output in sequence of the last transformer block 
+        - logits, l = h^L_N . E^T  // E^T is V x d is unembedding matrix
+            - weight tying. This is same as the input embedding matrix E. So inputs and outputs are in the same space
+            - logit lens: tool for debugging / interpreting the model
+                - simply applying the unembedding matrix to the output of any layers to see what words it may represents
+                - doesn't always work but is a useful tool to understand the model
+        - final output, y = softmax(l)
+- Large Language Models sampling methods
+    - random sampling
+        - doesn't work very well because the tail is long and fat
+    - main trade-off: quality v/s diversity
+        - prioritize quality: weight more likely words more
+            - rated by people as more coherent, more accurate, more factual, etc.
+            - but are also rated as more boring, more repetitive, less creative, etc.
+    - top-k sampling
+        - sample from top k most likely words
+        - k = 1 is greedy sampling, k = V is random sampling
+    - top-p sampling
+        - issues with top-k
+            - if k is too small and probability mass is flat, then the model will be forced to sample from a very small set of words
+            - if k is too large and probability mass is concentrated, then the model may sample from a very large set of words unlikely words
+        - instead pick the smallest set of words that have cumulative probability mass > p
+    - temperature sampling
+        - scale the logits by a temperature parameter
+        - higher temperature -> more uniform distribution
+            - T > 1 gives flatter distribution than the original distribution
+        - lower temperature -> more peaky distribution
+            - as temperature approaches 0, it becomes greedy sampling
+- LLM Training
+    - self-supervision
+    - teacher forcing
+    - cross entropy loss:
+        - input: "so long and thanks for"
+        - output: "long and thanks for all"
+        - loss: -sum_i log(P(w_i = observed_w i | w_{i-1}, w_{i-2}, ..., w_1))
+    - Parallelize: calculation of each sequence index is independent of the other sequence indices
+    - usually trained with full context
+        - small documents are concatenated, with separators, to form a single long document
+        - small contexts are also anyway getting trained due to the autoregressive nature of the model
+    - batch size is usually very big (large GPT-3 uses batch size of 3.2 million tokens)
+    - training data
+        - text scraped from web + carefully curated data
+            - common crawl
+                - clean and dedup: remove non-natural language like code, offensive word blocklists, etc.
+            - wikipedia, books
+        - training data likely contains data helpful for many NLP tasks
+            - question-answer pairs, dialogues, translations, documents with their summaries
+- Scaling laws
+    - 3 major factors determine the performance of a model
+        - model size
+        - data size
+        - compute size
+    - usually follows power law. Loss scale with 1 / (S^alpha) where S is the size of the model, data, or compute
+        - TODO: find good resources on this. Is alpha usually sublinear or superlinear?
 
 
 # References
@@ -686,3 +920,4 @@
 - [3] "Text Mining with R: A Tidy Approach" by Julia Silge and David Robinson
 - [4] "Applied Text Analysis with Python: Enabling Language-Aware Data Products with Machine Learning" by Benjamin Bengfort, Rebecca Bilbro, and Tony Ojeda
 - [5] CS 224D: Deep Learning for NLP [notes](http://cs224d.stanford.edu/lecture_notes/notes1.pdf) [notes](https://cs224d.stanford.edu/lecture_notes/LectureNotes2.pdf)
+- [6] [3B1B GPT intuition](https://www.youtube.com/watch?v=wjZofJX0v4M&ab_channel=3Blue1Brown)
