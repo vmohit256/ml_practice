@@ -912,6 +912,148 @@
     - usually follows power law. Loss scale with 1 / (S^alpha) where S is the size of the model, data, or compute
         - TODO: find good resources on this. Is alpha usually sublinear or superlinear?
 
+## Section-9: Fine-Tuning and Masked Language Models
+
+- main focus of Bidirectional encoders is computing contextual embeddings
+    - main focus of autoregressive models is predicting the next word
+        - causal models like GPT-2, GPT-3, etc. -> decoder only
+        - bidirectional models like BERT -> encoder only
+    - contextual embeddings produced by bidirectional masked language models work better than ones produced by causal / left to right language models
+        - because they can leverage information from both sides of the word
+        - eg: assigning NER tags requires information from both sides of the word
+- architecture
+    - don't mask out the upper triangular part of the attention matrix
+    - original BERT paper specs
+        - English-only subword vocab sized 30,000 using wordpeice algorithm
+        - 12 transformer layers (with 12 attention heads each)
+        - hidden size of 768
+    - input length is fixed (512 tokens for BERT)
+- training
+    - cloze task
+        - predict 1 or more masked words in a sentence
+        - other variants of recovering from corruption
+            - substitute a word with a random word
+            - reorder words, delete words, extraneous word insertion
+    - Masked Language Modelling in BERT
+        - randomly select a word for corruption (15% of words selected in BERT)
+            - BERT-like models are very sample inefficient. Only 15% of the data is used for training
+        - 3 ways to corrupt it
+            - replace with [MASK] token (80% of the time in BERT)
+            - replace with a random word (10% of the time in BERT) sampled from token unigram probabilities
+            - keep the word as it is (10% of the time in BERT)
+    - MLM: loss function
+        - cross entropy loss on the corrupted words only
+    - Next sentence prediction
+        - Tasks relating to a pair of sentences
+            - paraphrase detection (detecting if two sentences are paraphrases of each other)
+            - entailment detection (detecting if one sentence entails from or contradicts the other)
+            - discourse coherence (detecting if two sentences form a coherent discourse)
+        - goal: capture knowledge required for these tasks in contextual embeddings
+            - input: pair of sentences. eg: [CLS] sentence1 [SEP] sentence2 [SEP]
+                - output embedding of [CLS] token is used for classification
+            - output: 0 or 1 if sentence2 is the next sentence after sentence1
+        - final BERT loss is joint loss of MLM and NSP combined
+    - training data
+        - original BERT paper used BooksCorpus (800M words) and English Wikipedia (2.5B words)
+        - XLM-R used 100 languages and 300 billion tokens from common crawl
+        - 512 token inputs
+        - some models like RoBERTa drop next sentence prediction task
+        - large batch sizes (8K, 32K tokens)
+        - what data to use for creating vocab for multiple languages?
+            - divide corpus into languages
+            - rescale prior probabilities of words in each language like: p_l = c_l / sum_i c_i -> p_l_adjusted = p_l^alpha / sum_i p_i^alpha
+            - alpha between 0 and 1 (like 0.3) boosts low data languages
+        - pros of multilinguality
+            - avoid the need to maintain 100s of monolingual models
+            - improve performance on low resource languages by leveraging information from similar languages that have more data
+        - curse of multilinguality
+            - for large languages, performan on each language degrades
+            - multilingual accent: grammatical structures in higherresource languages (often English) bleed into lower-resource languages
+- contextual embeddings
+    - output of the final transformer layer
+        - another option: average the embeddings at that position over last 4 layers
+    - static word embeddings (word2vec, fasttext, etc.) -> meaning of word types (eg: bank)
+    - contextual embeddings (BERT, GPT, etc.) -> meaning of word instances (eg: "bank" in the sentences "I walked along the bank" and "I deposited money in the bank")
+    - word-sense disambiguation
+        - polysemy: words have multiple meanings (eg: bank)
+        - cluster embeddings of a word the word "die" to see these sentences clusters
+            - German article: "Die" is a cluster
+            - "a playing die" is another cluster
+            - "single person dies" and "multiple people die" is another cluster with the two forms also seperable within it
+        - best performing algorithms
+            - from supervised labels, (sentence, target word, word sense), obtain embeddings for senses by averaging context embeddings of target words
+            - at test time, output nearest sense embedding to the context embedding of the target word in the test sentence
+    - word similarity
+        - measure similarity between two contextual embeddings of word instances of the same underlying word type
+        - anisotropy
+            - contextual embeddings of all words tend to extremely similar
+            - anisotropy = expected value of cosine similarity between two random words
+                - cause of anisotropy: some dimensions have very large magnitude and high variance
+                - TODO: what is this? Look into it. Isn't there layer norm right at the end?
+            - standard scaling helps with aniostropy by normalizing variances across dimensions and prevent large magnitude dimensions from dominating cosine similarity
+- fine tuning
+    - always prepend [CLS] token to the input sequence because BERT expects it
+    - sequence classification
+        - prepend [CLS] token to the input sequence
+        - add a linear layer on top of the output of [CLS] token at the beginning of the sequence
+            - y = softmax(W o_[CLS] + b)  // o_[CLS] is the output of the [CLS] token
+        - [CLS] encodes sentence because of the next sentence prediction task
+    - pairwise sequence classification
+        - paraphrase detection (are the two sentences paraphrases of each other?), logical entailment (does sentence A logically entail sentence B?), and discourse coherence (how coherent is sentence B as a follow-on to sentence A?)
+        - structure input same as NSP: [CLS] sentence1 [SEP] sentence2 [SEP]
+        - add a linear layer on top of the output of [CLS] token at the beginning of the sequence
+    - sequence labelling
+        - prepend [CLS] token to the input sequence 
+        - train linear unembedding layer on top of the output of each token
+            - y_i = softmax(W o_i + b)  // o_i is the output of the i-th token
+            - W is K x d, K is number of classes
+        - converting labelled data to BERT input is straightforward
+        - converting BERT output back to sequence labelling output like NER is not straightforward
+            - for a span tagging like Loc[Mt. Sanitas], keep the output of tokens "Mt" and "San" only. Ignore the output of "##itas" and "."
+                - also possible to combine probabilities somehow
+- span-based masking
+    - most tasks (NER, POS tagging, etc.) are span-based and not single token masks
+    - SpanBERT: during pretraining, mask out entire spans of words instead of single words
+        - sample span length from a geometric distribution biased towards smaller spans (max = 10)
+        - sample regime for masking
+            - 80% of the time, mask out the span
+            - 10% of the time, replace the span with random words from unigram distribution
+            - 10% of the time, keep the words as it is
+        - add another component to the loss function that predicts tokens inside the span using context embeddings of the span boundaries
+            - loss = MLM loss + span based loss
+            - this is added because MLM loss doesn't capture the span-based structure of the data // TODO: this is not very clear. Need to read more resources on this topic
+            - L_SBO = sum_i L_SBO(x_i) for i in span x_s, x_{s+1}, ..., x_e
+            - L_SBO(x_i) = -log(P(x_i | x_s, x_e, POS_{i-s+1}))   // model should be able to predict specific words inside the span using the context embeddings of the span boundaries
+                - POS_{i-s+1} is the frozen relative positional embedding (the sin-cos thing)
+                - P(x_i | x_s, x_e, POS_{i-s+1}) = softmax(W_V FFN([x_s; x_e; POS_{i-s+1}]) + b)
+                    - FFN is a feed forward network
+                    - W_V is a learned weight matrix  // TODO: no weight tying here?
+                    - [x_s; x_e; POS_{i-s+1}] is the concatenation of the embeddings
+    - fine-tuning 
+        - general framework
+            - identify all spans
+            - classify each span as a label
+            - determine final output by combining the predictions of all spans
+        - input: (x_1, x_2, ..., x_T)
+        - generate all possible spans of length <= L, S(x) from x
+        - use contextualized embeddings to represent a span
+            - spanRep_ij = [s_i; e_j; g_ij]
+                - s_i = FFN_start(z_i)
+                - e_j = FFN_end(z_j)
+                - g_ij = SelfAttention(z_i, z_j)
+            - for NER task, span is classified as the label (PER, LOC, etc.)
+                - y_ij = softmax(FFN(spanRep_ij))
+        - advantages over BIO sequence labelling
+            - BIO is prone to label mismatch problem. One wrong label results in the whole sample being wrong
+                - label is assigned at the span level so this problem is mitigated
+            - Can also represent nested entities
+                - eg: Jan Villanueva of United Airlines Holding discussed
+                    - Jan Villanueva is a person
+                    - United Airlines Holding is an organization
+                    - United Airlines is also an organization
+                - BIO can't represent such nested entities but span-based labelling can
+
+
 
 # References
 
