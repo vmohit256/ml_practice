@@ -1,0 +1,334 @@
+
+
+# Crash course
+
+https://web.mit.edu/18.06/www/Essays/newpaper_ver3.pdf
+
+- general m x n real matrix
+    - row space, r(A) = column space of A^T = c(A^T)
+    - r(A) = dim(c(A)) = dim(c(A^T))
+    - n = dim(c(A)) + dim(null_space(A^T))
+    - m = dim(c(A^T)) + dim(null_space(A))
+    - r(A) = dim(c(A)) = dim(c(A^T)) because A is a surjective function from row space to column space and A^T is a surjective function from column space to row space
+    - orthonormal bases of the 4 subspaces
+        - A = U Sigma V^T
+        - A [v1, v2, ..., vr, ..., vn] = [u1, u2, ..., ur, ..., um] Sigma
+            - A v_i = sigma_i u_i
+            - for non-zero eigen values: basis vectors v_i of row space map to basis vectors u_i of column space
+            - for zero eigen values: v_is are basis vectors for null space of A and u_is are basis vectors for null space of A^T
+    - A A^T and A^T A are invertable wherever possible
+    - A+ is the pseudo-inverse of A
+        - A+ = V Sigma+ U^T
+        - Sigma+ = [1/sigma_1, 1/sigma_2, ..., 1/sigma_r, 0, 0, ..., 0]
+        - A+ A = I_r
+        - A A+ = I_r
+        - A A+ A = A
+        - A+ A A+ = A+
+        - every matrix A is invertible from row space to column space and A+ is the inverse
+- matrices of rank-1
+    - A = x y^T
+    - column and row spaces are lines
+    - eigenvalues
+        - A x = (y*T x) * x so x is an eigenvector with eigenvalue y^T x. All other eigenvalues are 0 since rank(A) = 1
+        - 2x2 case
+            - x is eigen vector with eigen value y^T x
+            - y^perp is eigen vector with eigen value 0
+            - NOTE: eigen vectors aren't always orthogonal
+    - decompositions in 2x2 case
+        - ||x|| = ||y|| = 1
+        - A = [y1*x, y2*x, ..., yn*x] = [[x1 * y^T], [x2 * y^T], ..., [xn * y^T]]
+        - C(A) = {x}, N(A^T) = {x^perp}
+        - R(A) = {y}, N(A) = {y^perp}
+        - SVD
+            - A y = 1 * x, A y^perp = 0 * x
+            - A [ y y^perp ] = [ x x^perp ] [ [1 0 ] [0 0]]
+        - Diagonalization
+            - eigen vectors
+                - x with eigen value A x = x y^T x = y^T x * x => y^T x
+                - y^perp with eigen value A y^perp = 0
+            - A [x y^perp] = [x y^perp] [[y^T x 0] [0 0]]
+                - note: eigen vectors are not orthogonal. det([x y^perp]) = cos(theta)
+
+
+
+
+# Spectral Decompositions
+
+https://www.youtube.com/watch?v=mhy-ZKSARxI&ab_channel=VisualKernel
+
+- Q Q^T = Q^T Q = I for orthogonal matrices
+    - Q = [q1, q2, ..., qn] where q1, q2, ..., qn are orthonormal vectors
+    - Q^T = [q1^T, q2^T, ..., qn^T]*T
+    - (Q^T Q)_ij = qi^T * qj = 1 if i = j, 0 otherwise
+- Spectral theorem: any symmetric matrix can be decomposed as: S = Q Lamda Q^T
+    - TODO: understand its proof
+- for any n x m matrix, A A^T and A^T A are positive semi-definite
+    - they are non-negative eigen values
+    - their overlapping eigen values are square of the eigen values of A
+    - A = U Sigma V^T
+    - A^T A = V Sigma^T U^T U Sigma V^T = V Sigma^2 V^T
+    - A A^T = U Sigma V^T V Sigma U^T = U Sigma^2 U^T
+
+# Notes
+
+- coordinate functions / projections
+    - pi_i : R^n -> R, pi_i(x) = x_i
+        - any arbitrary function f : A -> R^n can be written as: f(x) = (pi_1(f(x)), pi_2(f(x)), ..., pi_n(f(x)))
+            - component function, f_i : A -> R, f_i(x) = pi_i(f(x))
+            - so need to understand the coordinate functions to understand the function f
+- TODO: look at the the weird high-dimensional example in these [slides](https://www.math.iitb.ac.in/~ars/MA106/slides-I.pdf)
+    - is this related to curse of dimensionality?
+    - curse of dimensionality: vague term for various problems that occur when yo go into higher dimensions
+        - data sparsity: tf-idf vectors
+        - computational complexity: nearest neighbor search, kd-tree become difficult?
+        - distance function becomes less intuitive. Doesn't behave like the way we would expect in 2D or 3D. Behaviour that we think is intuitive in 2D or 3D often doesn't hold in higher dimensions
+            - distance between origin and diagonally opposite corner of a unit cube is sqrt(n) in n dimensions (i.e. grows unboundedly with n)
+            - so a sphere of radius 1 centered at origin becomes smaller and smaller relative to the cube as n grows
+                - small spheres are often used in various places like gradient descent, nearest neighbor search, etc.
+                - more and more unit sphere are needed to cover the unit cube as n grows (eg: 1 meter scale v/s 1 meter^2 area v/s 1 meter^3 volume. The "weight" of the n-d unit cube grows unboundedly with n)
+        - sampling problems: need exponentially more samples to cover the space
+- linear maps
+    - f: R^n -> R^m is linear if:
+        - f(x + y) = f(x) + f(y)
+        - f(ax) = af(x)
+    - any vector, x, can be written as a linear combination of the basis vectors: x = x_1 * e_1 + x_2 * e_2 + ... + x_n * e_n
+    - f(x) = f(x_1* e_1 + x_2 * e_2 + ... + x_n * e_n) = x_1 * f(e_1) + x_2 * f(e_2) + ... + x_n * f(e_n)
+    - so, f is completely determined by n vectors f(e_1), f(e_2), ..., f(e_n) in R^m
+        - conversely, any n vectors in R^m determine a unique linear map from R^n to R^m: f(x) = x_1 * v_1 + x_2 * v_2 + ... + x_n * v_n using them as basis vectors
+    - f is linear if and only if f(x) = Mx for some matrix M
+    - matrix, M (m x n), is a linear map f: R^n -> R^m using column vectors of M as basis vectors
+        - matrix multiplication is a composition of linear functions
+        - M maps e_1 to first column of M, e_2 to second column of M, and so on
+        - [Helpful Intuition](https://math.stackexchange.com/questions/598258/geometric-interpretation-of-detat-deta)
+            - Matrix maps a sphere to an ellipsoid (or vice versa) in n dimensions
+                - SVD = (i) rotation to align axes of ellipsoid with axes of sphere, (ii) scaling along basis vectors to get the shape of the ellipsoid right, (iii) rotation to get the orientation of the ellipsoid right
+- types of matrices and their inverse
+    - intuition on invertible matrices
+        - preserves information. Nothing is lost in the transformation as it can be reversed
+        - all eigen values are non-zero so no subspaces are squished to zero. It is simply change of basis and then squishing, flipping, and expanding subspaces
+    - elementary matrices
+        - n x n, square matrix
+        - E_ij = zero matrix with 1 at (i, j) position
+        - E_ij * A matrix is zero except its ith row is jth row of A. Picks jth row of A and puts it in ith row
+        - E_ij * E_ij = 0 iff i != j
+        - for all i!=j, I + alpha * E_ij is invertible for any alpha: (I + alpha * E_ij) * (I - alpha * E_ij) = I
+        - for all i, I + alpha * E_ii is invertible for any alpha!=1: (I + alpha * E_ii) * (I + beta * E_ii) = I => beta = -alpha/(1+alpha)
+    - transposition matrix
+        - T_ij = I + E_ij + E_ji - E_ii - E_jj  // swaps i and j rows of a matrix 
+            - Intuitively, this is invertible because you can simply swap i and j rows again to get back the original matrix
+            - T_ij * T_ij = I so T_ij is its own inverse
+    - permutation matrix
+        - defined by a permutation: sigma: {1, 2, ..., n} -> {1, 2, ..., n}
+        - P_ij = 1 if sigma(i) = j, 0 otherwise = sum_i E_sigma(i)i
+            - E_sigma(i)i picks up ith row and puts it in sigma(i)th row
+        - P^T is inverse because it picks sigma(i)th row and puts it in ith row which is reverse of what P does
+- gaussian elimination
+    - solving Ax = b
+    - solution set of S(x | Ax=b) = {c + v | v in null space of A, and c in column space of A such that Ac = b}
+    - TODO: is gaussian elimination equivalent to computing svd in some sense? How do these 2 relate?
+- determinants
+    - endomorphism: linear map from a vector space to itself (eg: rigid rotation)
+        - these don't change the volume of the space
+    - measure how much a linear map expands or contracts the space, i.e. a unit cube
+    - general framework
+        - define the "creature" we're looking for. In this case, it's a function R^n to R that measures how much a linear map: R^n to R^n expands or contracts the space
+            - det(A) should measure signed volume of the parallelepiped formed by the columns of A
+                - why? because basis vectors are transformed by A to form a parallelepiped. det(A) should measure the volume of this parallelepiped. Because initial volume is 1, det(A) is the scaling factor
+        - define the sufficient properties of the "creature" that we want
+            - if two columns are the same, det(A) = 0
+            - if change any 2 columns of A, det(A) changes sign
+            - det(A) = det(A^T)
+                - [Helpful Intuition](https://math.stackexchange.com/questions/598258/geometric-interpretation-of-detat-deta)
+                    - Matrix maps a sphere to an ellipsoid (or vice versa) in n dimensions
+                        - SVD = (i) rotation to align axes of ellipsoid with axes of sphere, (ii) scaling along basis vectors to get the shape of the ellipsoid right, (iii) rotation to get the orientation of the ellipsoid right  
+                        - this is why SVD implicitly assuming gaussian distribution as ellipsoids are the level sets of multivariate gaussian pdf
+                        - det(A) = product of eigen values of A
+                    - Transpose messes with the rotation only and not the scaling
+                        - A = U * Sigma * V^T (by SVD)
+                        - A^T = V * Sigma^T * U^T = V * Sigma * U^T  // A and U are rotation matrices, so they don't squish/expand subspaces. Sigma is the scaling matrix that does so but it remains the same when transposed. 
+            - det(AB) = det(A) * det(B)  // obvious from the parallelepiped interpretation
+            - determinant is a linear function of each column
+                - scale one of the columns and the volume scales by the same factor
+                - det(A_1, A_2, ..., u, ..., A_n) + det(A_1, A_2, ..., v, ..., A_n) = det(A_1, A_2, ..., u+v, ..., A_n)
+                    - [An intuitive explaination](https://math.stackexchange.com/questions/1403735/why-is-determinant-a-multilinear-function)
+                    - determinant is a linear function of component of ith column that is orthogonal to the other columns
+                    - component of ith column that is orthogonal to the other columns is itself a linear function 
+                    - so determinant is a linear function of any column
+        - launch a search party to find the "creature" that satisfies the properties
+            - use above properties and lots of steps to arrive at the explicit formula for determinant
+    - cramer's rule
+        - solve Ax=b directly when A is invertible (square is implied)
+        - x_i = det(M_i) / det(A) where M_i is A with ith column replaced by b
+            - [An intuitive explaination](https://www.3blue1brown.com/lessons/cramers-rule)
+            - TODO: understand it well enough to be able to recall it as needed
+            - define ith coordinate using the geometric interpretation of determinants (*Key Idea*)
+                - x_i = area of parallelopiped formed by the basic vectors where the ith vector is replaced by x = Area_before_transformation
+                    - Ix_i = (e_1, e_2, ..., x, ..., e_n)
+                    - det(Ix_i) = x_i
+                - after applying transformation, the area become, Area_after_transformation = det(A * Ix_i) = det(A) * x_i = area of parallelopiped formed by the columns of A where the ith column is replaced by b (since b = Ax)
+                - so, x_i = Area_after_transformation / Area_before_transformation = det(M_i) / det(A)
+- vector spaces
+    - V is a vector space over a field K if:
+        - K = R or C (Real or Complex vector space)
+        - closure axioms (generalized linear combination)
+            - addition: x + y is in V for all x, y in V
+            - scalar multiplication: a * x is in V for all a in K and x in V
+        - axioms for addition
+            - commutativity: x + y = y + x
+            - associativity: x + (y + z) = (x + y) + z
+            - zero / identity element exists: there exists 0 in V such that x + 0 = x for all x in V
+            - inverse / negative element: for every x in V, there exists -x in V such that x + (-x) = 0
+        - axioms for scalar multiplication
+            - associativity: a * (b * x) = (a * b) * x for all a, b in K and x in V
+            - distributivity (over addition in V): a * (x + y) = a * x + a * y for all a in K and x, y in V
+            - distributivity (over addition in K): (a + b) * x = a * x + b * x for all a, b in K and x in V
+            - identity element for multiplication exists: 1 * x = x for all x in V
+        - examples
+            - set of all functions from any set S to K
+                - eg: C[a, b]: set of all continuous functions from [a, b] to R
+            - C^r(U): set of all r times continuously differentiable functions on U
+                - C^0(U) superset of C^1(U) superset of C^2(U) ...
+            - set of all m x n matrices with values in K is a vector space over K under matrix addition and scalar multiplication
+            - set of all polynomials of degree <= n is a vector space over K under polynomial addition and scalar multiplication
+        - subspace
+            - W is a subspace of V if:
+                - W is a vector space over K under the same operations of addition and scalar multiplication as V
+                - W is a subset of V
+            - [0, inf) is not a subspace of R (-1 * x is not in [0, inf))
+            - only subspaces of R are 0 and R itself
+            - set of points on lines passing through origin in R^2 is a subspace of R^2
+    - linear transformations over vector spaces V and W
+        - functions, f: V -> W, such that:
+            - f(x + y) = f(x) + f(y) for all x, y in V
+            - f(a * x) = a * f(x) for all a in K and x in V
+        - span(S) = set of all linear combinations of vectors in S
+        - basis: 
+            - {v1, v2, ..., vn} is a basis of V if:
+                - any v in V can be written as a linear combination of v1, v2, ..., vn
+                - span({v1, v2, ..., vn}) = V
+        - linear map f is completely determined by its values on a basis of V
+        - isomorphism: invertible linear map
+            - A -> A^T is an isomorphism between M_{m x n}(K) and M_{n x m}(K)
+            - C (as a vector space over field R) is isomorphic to R^2
+        - range(f) = {f(x) in W | x in V}
+        - null_space(f) = {x in V | f(x) = 0}
+        - rank(f) = dim(range(f))
+        - nullity(f) = dim(null_space(f))
+        - rank-nullity theorem: rank(f) + nullity(f) = dim(V) (for finite dimensional vector spaces V and W only)
+        - to associate a matrix with a linear map, choose bases for V and W
+            - A = [f(e_1), f(e_2), ..., f(e_n)] where {e_1, e_2, ..., e_n} is a basis of V
+            - A is invertible if and only if f is an isomorphism
+    - change of basis
+        - let T be the target transformation n x n matrix, with f_T as the linear map it represents in standard basis
+        - let {v_1, v_2, ..., v_n} be a new basis of V, with N = [v_1, v_2, ..., v_n] that maps the standard basis to the new basis
+        - change of basis: what is the matrix representation of f_T in the new basis?
+            - let it be C (for change of basis)
+            - for any vector x in new basis, N^-1 * x = representation of x in standard basis
+            - T * N^-1 * x = transformed x in standard basis
+            - N * T * N^-1 * x = transformed x in new basis
+            - so, C = N * T * N^-1
+        - applications
+            - compute A^n efficiently by finding a basis such that A = C * D * C^-1 where D is diagonal. Then many functions like A^n, exp(A), etc. can be computed efficiently
+            - svd: convert weird ellipsoids to spheres by rotating, scaling, and rotating again
+        - similar matrix: A ~ B if there exists an invertible matrix P such that A = P * B * P^-1
+            - similar matrices represent the same linear map in different bases
+            - similar matrices have the same eigen values, determinant, rank, etc.
+    - rank
+        - A is any m x n matrix over R
+            - row space, r(A) in R^n: span of rows of A
+            - column space, c(A) in R^m: span of columns of A
+            - determinantal rank (A) = maximum r such that there exists an r x r submatrix of A with non-zero determinant
+            - G(A) = echelon form of A (looks like upper triangular)
+            - rank(A) = dim(c(A)) = dim(r(A)) = determinantal rank (A) = number of non-zero rows in G(A)
+                - all this is easy to prove if G(A) = A, i.e. A is already in echelon form
+                - proof: show that each step in gaussian elimination doesn't change any of these ranks
+                    - elementary row operations 
+                        - doesn't change the row space
+                        - doesn't change the column space dimension
+                            - E, elementary matrix, is invertible so it is an isomorphism. So, E* A has the same column space dimension as A
+                        - so, row_rank(A) = row_rank(G(A)) = column_rank(G(A)) = column_rank(A)
+                    - row rank and determinantal rank are the same
+                        - again some big non-intuitive proof. // TODO: understand the unintuitive proof
+                - intuition
+                    - matrix, A, n x m maps row space to column space
+                    - matrix, A^T, m x n maps column space to row space
+                    - if you remove the null space and left null spaces then you get invertible maps from row space to column space and vice versa so their dimensions are the same
+                        - A is surjective function from r(A) -> c(A) so dim(c(A)) <= dim(r(A))
+                        - A^T is surjective function from c(A) -> r(A) so dim(r(A)) <= dim(c(A))
+- inner product and orthogonality
+    - |u . v| <= ||u|| * ||v|| (Cauchy-Schwarz inequality)
+        - |u . v| = ||u|| * ||v|| cos(theta) where theta is the angle between u and v
+    - ||u + v|| <= ||u|| + ||v|| (triangle inequality)
+    - Gram-Schmidt process
+        - convert any basis to an orthonormal basis
+        - pick a vector, normalize it, and remove its projection from all other vectors
+        - repeat for all vectors
+    - Orthogonal complement
+        - if W is a subspace of V
+        - then every vector in V can be written as, v = w + w' where w in W and w' in W^perp
+        - and w is closest to v in W
+- eigenvalues and eigenvectors
+    - diagonal matrices are simplest to understand so we want to convert any matrix to a diagonal matrix to help reason about it
+    - diagonalizable: A = M * D * M^-1 where D is diagonal and P is invertible (P is the change of basis matrix)
+        - D = M^-1 * A * M where M is the matrix of eigenvectors of A
+            - M D = A M => M D e_i = A M e_i = A v_i = lambda_i v_i
+        - n x n matrix  A is diagonalizable if and only if it has n linearly independent eigenvectors
+    - intuition
+        - eigen vectors are the basis where an ellipsoid is aligned with the axes of the space
+        - eigen values are the scaling factors along the axes of the aligned ellipsoid
+    - characteristic polynomial: det(A - lambda I) = 0
+        - roots of the characteristic polynomial are the eigenvalues of A
+        - null space of A - lambda I is the eigenspace of A corresponding to eigenvalue lambda
+        - tr(A) = sum of eigenvalues of A  // eigen values can be complex too
+        - det(A) = product of eigenvalues of A
+        - real eigenvalue -> real eigenvector
+        - different eigenvalues -> linearly independent eigenvectors
+        - geometric multiplicity: dimension of the eigenspace corresponding to an eigenvalue
+        - algebraic multiplicity: multiplicity of an eigenvalue as a root of the characteristic polynomial
+            - both are invariant under change of basis / similarity
+        - geometric multiplicity <= algebraic multiplicity
+            - proof: if geometric multiplicity is k, then change the first k standard basis with these eigenvectors to obtain characteristic polynomial divisible by (lambda - lambda_i)^k
+            - TODO: there is something called generalized eigenvectors. They paint the complete picture and explain where those missing geometric multiplicity eigenvectors are
+    - diagonalization
+        - n x n matrix A is diagonalizable if and only if algebraic and geometric multiplicities of each eigenvalue are the same
+        - non-diagonalizable matrices are called "defective" matrices
+    - Eigen values of special matrices
+        - (consider complex vector space C^n for this section)
+            - u . v = sum_i u_i* * v_i where u_i* is the complex conjugate of u_i
+                - if you define it normally, then you can get u.u = 0 for non-zero u (eg: u = (1, i)) 
+                - this definition has nice properties but is assymetric
+                - but, it is a valid generalization of dot product in real vector spaces
+        - Hermitian matrix: A = A*   // generalization of real symmetric matrices
+            - A* => transpose and take complex conjugate of each element
+            - real symmetric matrices are Hermitian
+            - all eigen values are real
+                - Key lemma: u* A u is a real number for any vector u
+                - for eigen vector, v* A v = lambda v* v = lambda ||v||^2 which is real so lambda is real
+                - eigen vectors corresponding to different eigen values are orthogonal
+            - skew-Hermitian matrix: A = -A*
+                - Key lemma: u* A u is 0 or a pure imaginary number for any vector u
+                - eigen values are pure imaginary or 0
+                - eigen vectors corresponding to different eigen values are orthogonal
+        - orthogonal matrix
+            - real and unitary, i.e. A* A = I
+            - all eigen values have magnitude 1
+            - eigen vectors of different eigen values are orthogonal
+            - for 2d rotation matrix, [[cos(theta), -sin(theta)], [sin(theta), cos(theta)]], eigen values are exp(+i*theta) and exp(-i*theta)
+        - spectral theorem
+            - congruent matrix
+                - A and B are congruent if C * A C = B for some unitary matrix C  // unitary is a generalization of orthogonal to complex vector spaces
+            - triangularization
+                - A is triangularizable if there is C s.t. C^-1 A * C is upper triangular
+            - normal matrix: square matrix A* A = A A*
+            - any normal matrix A is such that C* A C = D where D is diagonal and C is unitary
+        
+
+
+# References
+
+1. [Essence of linear algebra](https://www.youtube.com/watch?v=fNk_zzaMoSs&list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab&ab_channel=3Blue1Brown)
+2. [Big picture of linear algebra](https://www.youtube.com/watch?v=ggWYkes-n6E&ab_channel=MITOpenCourseWare)
+3. [Strang - SVD](https://www.youtube.com/watch?v=mBcLRGuAFUk&ab_channel=MITOpenCourseWare)
+4. [MA106 IITB](https://www.math.iitb.ac.in/~ars/MA106.html)
+5. [Four Fundamental Subspaces](https://web.mit.edu/18.06/www/Essays/newpaper_ver3.pdf)
+6. Sheldon Axler. Linear Algebra Done Right //TODO: this looks like an awesome book! Need to read this
