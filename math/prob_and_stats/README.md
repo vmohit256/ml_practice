@@ -121,6 +121,9 @@
             - P(a < X <= b) = fx(b) – fx(a)
             - P(X=a) = fx(c) - fx(c-) 
     - TODO: what is sample space, event space, probability space for: toss a coin and then roll a die?
+    - independence
+        - Discrete: X and Y are independent if P(X=x, Y=y) = P(X=x) * P(Y=y) for all x, y
+        - Continuous: X and Y are independent if fx,y(x, y) = fx(x) * fy(y) for all x, y (i.e joint pdf is product of marginals)
     - sum of independent random variables, Z := X + Y
         - pmf(Z) is discrete convolution of pmfs of X and Y
         - pdf(Z) is continuous convolution of pdfs of X and Y 
@@ -191,6 +194,11 @@
         - used for sampling from distribution: X ~ U(0, 1) -> transform -> get a sample from poisson
         - chi-square pdf, Y = X^2 where X is gaussian
         - Y := 1/X transforms gamma pdf to inverse-gamma (TODO: what is this?)
+    - sampling from any strictly increasing CDF, F, using uniform random variable
+        - F(X) = U, X = F^-1(U)
+        - F^-1 is called inverse transform sampling
+        - F: R -> [0, 1] is CDF of X and acts like u in case of P(U <= u) = u for uniform
+        - F^-1: [0, 1] -> R is inverse of CDF
 - Multi Variate Gaussian
     - X = A * W + mu
         - W is D x 1 i.i.d gaussian rvs
@@ -299,6 +307,10 @@
             - posterior mean minimizes mean squared error loss function
             - MAP estimate: argmax candidate_theta P(candidate_theta | x1, x2, ..., xn), minimizes expected 0/1 loss. Loss(candidate | optimal value) = 1 if candidate==optimal else 0
             - median of posterior, P(candidate_theta | x1, x2, ..., xn), minimizes risk function using ebsolute error loss function 
+    - conjugate prior
+        - prior (P(thetat)) and posterior (P(theta | data)) belong to same family of distributions
+        - makes computation easier
+        - eg: gaussian prior and gaussian likelihood gives gaussian posterior
     - fisher information
         - Question: when is parameter estimation easier and when is it hard?
             - Quantify: how much information does a sample of data provide about the unknown parameter?
@@ -315,9 +327,72 @@
                         - so intuitively, 2nd derivative will always be negative (need to formalize this argument more)
         - can be computed from definition for various classes of distributions (gaussian, binomial, etc.) and grows with some of the parameters
     - TODO: cramer-rao lower bound, jeffreys prior, conjugate prior
-        
+- Frequentist Statistics and Hypothesis Testing [2]
+    - frequentist = MLE, bayesian = MAP
+    - avoid any prior asumptions or knowledge about the data only use the data to make inferences
+    - statistic
+        - can be computed from observations
+        - cannot depend on unknown parameters
+        - mean, maximum, minimum, MLE, etc.
+        - random variable
+    - NHST: null hypothesis significance testing
+        - null hypothesis: H0, alternative hypothesis: H1
+            - p(x | H0) is null distribution
+        - rejection region: reject H0 if test statistic falls in this region
+        - significance level: P(x in rejection region | H0)
+            - while designing the test: either choose significance level and then find rejection region or vice versa
+        - two-sided z-test
+            - examples:
+                - Comparing the average blood pressure levels of two different age groups. H0: average blood pressure levels are same in both groups.
+                - Comparing the average customer satisfaction scores of two different products. H0: average customer satisfaction scores are same for both products.
+            - we have x_1, x_2, ..., x_n normally distributed data with unknown mean and and known variance sigma^2
+            - H0 = mu=mu0 and sigma, H1 = mu!=mu0 (mu can be < or > mu0)
+            - statistic, z = (x_bar - mu0) / (sigma / sqrt(n))
+            - null distribution: N(0, 1)
+            - rejection region: |z| > z_alpha/2, where alpha is significance level and P(Z > z_alpha/2) = alpha/2
+            - p-value: P(|Z| > |z|) = 2 * P(Z > |z|). Reject H0 if p-value < alpha (often 0.05)
+        - right-sided
+            - examples
+                - increase in average website traffic after a redesign. H0: average traffic is same before and after redesign
+                - increase in patient recovery rate after a new treatment. H0: recovery rate is same before and after treatment
+            - we have x_1, x_2, ..., x_n normally distributed data with unknown mean and known variance sigma^2
+            - H0: mu = mu0, H1: mu > mu0
+            - statistic, z = (x_bar - mu0) / (sigma / sqrt(n))
+            - null distribution: N(0, 1)
+            - rejection region: z > z_alpha, where P(Z > z_alpha) = alpha
+            - p-value: P(Z > z). Reject H0 if p-value < alpha
+        - error types
+            - type-1: reject H0 when it is true
+                - P(x in rejection region | H0) = alpha, significance level
+                - significane level is probability of type-1 error
+                - intuition: rejected H0 way too easily even when it was true
+            - type-2: accept H0 when it is false
+                - P(x in rejection region | H1) = power = 1 - probability of type-2 error
+                - intuition: couldn't reject H0 even when it was obviously false
+        - Chi-square test for homogeneity
+            - Homogeneity: H0 = all populations have same distribution
+                - all treatments are equally effective
+                - Connecticut voters have same party preference as New York voters
+            - example: H0 = three treatments T1, T2, T3 are equally effective. We have observations, O_ic = number of people in ith treatment who fall in category c in {cured, not cured}
+                - create table of observed frequencies and expected frequencies for each treatment-cured pair
+                    - expected cure rate = (total cured) / (total treated) (assuming H0, this is the best we can do)
+                - assuming H0, compute X^2 = sum over all cells (observed - expected)^2 / expected
+                - degrees of freedom = (rows - 1) * (columns - 1) = (2-1)*(3-1) = 2
+                - pearson chi-square statistic = X^2 = sum over all cells (observed - expected)^2 / expected
+                - null distribution: chi-square with 2 degrees of freedom
+        - F-test (one-way ANOVA)
+            - like t-test but for comparing means of multiple groups
+            - have N groups and M data points for each group
+            - means are unknown but variances are known and equal
+            - H0: means of all groups are same
+            - statistic: F = (between group variance) / (within group variance)
+                - within group variance = mean of observed variances of each group
+                - between group variance = (M / (N-1)) * sum over all groups (mean of group - grand mean)^2
+                - if means are same then ratio should be 1
+            - null distribution: F with (N-1, N*M-N) degrees of freedom
     
 
 # References
 
 - Main reference: https://github.com/zestyoreo/iitb_courses/tree/main/CS215%20Data%20AI
+- [2] https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/pages/classes-reading-and-in-class-materials/
