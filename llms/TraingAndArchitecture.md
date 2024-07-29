@@ -3,9 +3,6 @@
 
 ## Surveys
 
-- [T5] [Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer](https://arxiv.org/pdf/1910.10683)
-    - convert every NLP problem into a text-to-text problem
-
 ## Architecture
 
 - [Attention OG] [Attention Is All You Need](https://arxiv.org/pdf/1706.03762) (2017)
@@ -109,9 +106,73 @@
             - tuning h, dk, dv is important given size is fixed
             - using fixed positional encodings is as good as learned ones
 
+- [FLASH ATTN] [FLASHATTENTION: Fast and Memory-Efficient Exact Attention with IO-Awareness](https://proceedings.neurips.cc/paper_files/paper/2022/file/67d57c32e20fd0a7a302cb81d36e40d5-Paper-Conference.pdf) [NIPS 2022]
+    - TODO: read and summarize
+        - faster implementation of attention in GPUs
+        - has 3x speed on GPT
+        - low level discussion can help understand what exactly goes on inside a GPU to implement attention
+
+- [LoRA] [LORA: LOW-RANK ADAPTATION OF LARGE LANGUAGE MODELS](https://arxiv.org/pdf/2106.09685)            
+    - TODO: read and summarize
+        - can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times
 
 
-## BERT-based Models
+
+## Mainstream LLMs
+
+- [GPT2] [Language Models are Unsupervised Multitask Learners](https://d4mucfpksywv.cloudfront.net/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) 
+    - TODO: read and summarize
+        - first paper that shows zero-shot learning
+        - fundamental shift from fine-tuning towards zero-shot or few-shot learning
+
+- [GPT3] [Language Models are Few-Shot Learners](https://arxiv.org/pdf/2005.14165)
+    - TODO: read and summarize
+        - better performance than GPT-2
+        - more concretizing prompt engineering approach (v/s fine tuning)
+        - still can't reach SOTA on most benchmarks though
+
+- [GPT4] [GPT-4 Technical Report](https://arxiv.org/pdf/2303.08774)
+    - TODO: read and summarize
+        - how much detail do these papers even contain?
+        - abstract mentions no details of comaprison of current models with SOTA on various benchmarks
+
+- [LLaMa] [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/pdf/2302.13971)
+    - TODO: read and summarize
+        - open source model with weights available
+        - uses publically available datasets only
+        - outperforms GPT3
+        - should be a better resource to learn how an LLM works
+
+- [LLaMa2] [Llama 2: Open Foundation and Fine-Tuned Chat Models](https://arxiv.org/pdf/2307.09288)
+    - TODO: read and summarize
+        - did llama-1 have no chat RLHF?
+        - abstract says outperforms open source models so probably doesn't outperform GPT-4
+
+- [LLaMa3] [The Llama 3 Herd of Models](https://scontent-xsp1-2.xx.fbcdn.net/v/t39.2365-6/452387774_1036916434819166_4173978747091533306_n.pdf?_nc_cat=104&ccb=1-7&_nc_sid=3c67a6&_nc_ohc=7qSoXLG5aAYQ7kNvgFUJ-mf&_nc_ht=scontent-xsp1-2.xx&gid=AO4mOvzW0LidiGAXOi6LOhU&oh=00_AYDN7sR1GJX6VVz-NsU5gu_zHQw8QnIBIBgyEdHe-yXAOQ&oe=66ABF94D)
+    - TODO: read and summarize
+        - native support for multilinguality, coding, reasoning, and tool usage
+        - context window of up to 128K tokens
+        - comparable performance with GPT-4
+        - includes  Llama Guard 3 model for input and output safety
+        - integration of image, video, and speech capabilities into Llama 3 via a compositional approach
+
+- [Mistal7B] [Mistral 7B](https://arxiv.org/pdf/2310.06825)
+    - TODO: read and summarize
+        - outperforms 13B llama2
+        - tricks for faster inferences
+            - grouped-query attention (GQA), sliding window attention (SWA)
+        - natively handles arbitrary length inputs (like RNN)
+        - Mistral 7B – Instruct models that outperform Llama 2 13B – chat model on human and automated benchmarks
+            - would be interesting to see how these benchmarks are designed
+
+- [Mixtral] [Mixtral of Experts](https://arxiv.org/pdf/2401.04088)
+    - TODO: read and summarize
+        - what exactly is mixture of experts?
+        - outperforms or matches Llama 2 70B and GPT-3.5 across all evaluated benchmarks
+        - Mixtral vastly outperforms Llama 2 70B on mathematics, code generation, and multilingual benchmarks
+        - We also provide a model finetuned to follow instructions, Mixtral 8x7B – Instruct, that surpasses GPT-3.5 Turbo, Claude-2.1, Gemini Pro, and Llama 2 70B – chat model on human benchmarks
+
+## Fine Tuning
 
 - [BERT OG] [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/pdf/1810.04805)
     - feature based: use pre-trained model's output as static features for downstream tasks
@@ -191,20 +252,216 @@
         - bigger models are better on all tasks, even when training data is very small
         - feature based approaches also work, though not as well as fine tuning
             - pick final 2-3 layers of BERT and use their output as features for training a new model from scratch on these static precomputed features
-                
-            
+             
 
-## Big Pretraining
-
-## RLHF
-
-## Fine Tuning
+- [T5] [Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer](https://arxiv.org/pdf/1910.10683)
+    - convert every NLP problem into a text-to-text problem
+        - formulate your problem as a text-to-text problem
+        - fine tune T5 on your dataset. Eg: for translation, input = "translate English to German: That is good.", output = "Das ist gut."
+        - use T5 to generate output for your input during inference
+    - comparison with BERT
+        - tasks: BERT -> masked language model and next sentence prediction, T5 -> text-to-text. T5 is broader
+        - T5 is focuses more on Text generation. BERT is encoder only. You can't use it for something like machine translation without building a decoder on top of it
+            - T5: translation, summarization, question answering
+            - BERT: classification, question answering
+    - architecture
+        - similar to attention is all you need and BERT
+        - simplified layer normalization with no bias term
+        - residual connection is *after* layer normalization
+        - different positional embeddings than original paper
+            - relative positional embeddings  // TODO: read up on this
+            - different embeddings for offset between positions of a "query" and "key" in self-attention
+                - simple version used: simply a scalar that gets added to the corresponding logit inside the attention function (??? is it added to A_lm, where A_lm is how much l^th output pays attention to m^th input?)
+            - share positional parameters across all layers
+            - only 32 embeddings that scale upto 128 positional difference. Beyond which, all far away positions are mapped to the same embeddings
+            - context length is not fixed to 128 because subsequent layers can attend to far away positions through previous layers if they wish to
+        - key differences from "Attention is all you need"
+            - remove bias term from layer norm
+            - add residual connection after layer norm
+            - use a different positional embedding scheme
+        - both encoder and decoder as similar in size to BERT_base
+            - 12 layers (layer = self-attention, optional encoder-decoder attention, and a feed-forward network)
+            - d_model = 768, d_kv = 64, d_ff = 3072, num_heads = 12, dropout = 0.1 everywhere
+            - 220 million parameters (2x BERT_base)
+        - causal (left to right) cross entropy loss on decoder output
+    - colossal clean crawled corpus (C4)
+        - tricks to remove noise like
+            - retained lines that ended in a terminal punctuation mark, discarded any page with fewer than 3 sentences, removed any page that contained any bad word
+            - detect and remove boilerplate policy notices like "terms of service" and "privacy policy"
+            - ...
+        - keep only english
+        - extracted from April 2019
+        - 750 GB (common crawl dumps 20TB data daily)
+    - downstream tasks
+        - machine translation, summarization, question answering, text classification
+        - GLUE, SuperGLUE
+            - Coreference resolution (dereference pronouns)
+        - CNN/Daily Mail abstractive summarization
+        - SQuAD question answering
+        - WMT English to German, French, and Romanian translation
+    - input-output format
+        - text-to-text format: input = text and output = text
+        - encode task in prompt
+            - input = "translate English to German: That is good.", output = "Das ist gut."
+            - classification
+                - input = "mnli premise: I hate pigeons. hypothesis: My feelings towards pigeons are filled with animosity", output = "entailment"
+                - if model outputs wrong word then it is considered wrong though authors never saw this happen
+            - input = "summarize: You know I used to hate action thrillers. I specifically liked ...", output = "The movie was great. It had a lot of action."
+            - input = "stsb sentence1: The rhino grazed on the grass. sentence2: A rhino is grazing in a field", output = "3.8" (sentence similarity task)
+    - training
+        - teacher forcing (feed the correct output instead of previous model output to the model during training)
+        - AdaFactor optimizer, trained for 2^19 = 524288 steps on C4 before fine tuning
+        - batch size = 128 and max sequence length = 512
+        - greedy decoding at test time
+        - pack multiple sequence into entry of the batch ot maximize utilization. Each batch has ~ 512 * 128 = 65k tokens
+        - total budget = 34B tokens (less than BERT which used 137B tokens)
+        - inverse square root learning rate schedule with warmup: 1 / sqrt(max(n, k)). lr = 0.01 for 10^4 steps and then decay
+        - tokenizer: SentencePiece. classified C4 pages into english, german, french, and romanian
+            - train sentencepiece model on 10 part english, 1 part german, 1 part french, 1 part romanian
+        - denoising objective
+            - randomly sample 15% of tokens in input to drop out
+            - replace each dropped out span with a single sentinel token
+            - output: dropped out token spans delimited by the same sentinel token used in input plus a final sentinel token to mark end of output
+    - results
+        - pretraining provides significant gains on all benchmarks
+            - gain is minimal in WMT English to French that already has a large dataset
+        - denoising loss function performs better on downstream task than vanilla next word prediction
+        - reducing layers hurts performance bad -> bigger models are better
+        - different objectives compared
+            - prefix lm: "Thank you for inviting" -> " me to your party."
+            - BERT-style: "Thank you <M> <M> me to your party apple week ." -> "(original text)"
+            - MASS-style: "Thank you <M> <M> me to your party <M> week" -> "(original text)"
+            - Deshuffling: " party me for your to . last fun you inviting week Thank" - "(original text)"
+            - variants of BERT-style
+                - I.i.d. noise, replace spans: "Thank you <X> me to your party <Y> week ." -> "<X> for inviting <Y> last <Z>"
+                - I.i.d. noise, drop tokens: "Thank you me to your party week ." -> "for inviting last"
+            - Random spans: "Thank you <X> to <Y> week ." -> "<X> for inviting me <Y> your party last <Z>"
+        - BERT wins out of [BERT, prefix LM, deshuffling]. Slightly outperforms prefix lm. deshuffling performs the worst
+        - for variants of BERT, I.i.d. noise, replace spans performs the bestt. Difference wasn't much
+        - corruption rate had limited effect on downstream performance. Except too high corruption rate (50%) hurt performance
+        - finally, random spans performed similarly as I.i.d. noise, replace spans. So, T5 uses it
+        - Architecture Ablation Summary: 
+            - model size is a big factor
+            - deshuffling is bad
+            - rest everything doesn't matter much
+        - effect of data type
+            - pre-training on in-domain unlabeled data can improve performance on downstream tasks
+                - news works for news, books work for books, etc.
+        - effect of data size
+            - very low loss on small datasets -> evidence of memorization
+            - bigger datasets are better
+        - comparision of fine tuning methods
+            - alternatives
+                - fine tune all parameters (encoder + decoder)
+                - adapter layers: freeze pretrained network and only add new layers on top during fine tuning
+                - gradual unfreezing
+            - observation: fine tuning all parameters is the best
+        - multi-task learning framework
+            - alternative to pretrain-then-fine-tune framework
+                - allowed to train on unsupervised tasks too
+            - important considerations
+                - how much data from each task? Avoid over- or under- fitting to any one task
+                    - difficult task may need more data
+                - "task interference" or "negative transfer"
+            - techniques
+                - Examples-proportional mixing: sample tasks in proportion to their data size. Put artificial limit K on huge tasks like self-superivsed learning or else they'll dominate the training data set
+                - Equal mixing: sample tasks uniformly
+                - Temperature-scaled mixing: rescale softmax temperature to control how much model focuses on each task. T=1 -> examples-proportional mixing and T = infinity -> uniform mixing
+            - observations
+                - multi-task performs worse than pretrained-then-fine-tune
+                - equal mixing many times have awful performance
+                    - low resource tasks overfit and high resource tasks underfit
+                - artifical limit "K" for examples-proportional mixing has a sweet spot
+                - temperature-scaled mixing performs well on most tasks with T=2
+                - multi-task model performs worse than single task model trained on a single task
+        - Combining Multi-Task Learning with Fine-Tuning
+            - 3 variants
+                - multi-task training:
+                    - pretrain on examples-proportional mixing (K=2^19) and then fine tune on each task
+                    - hope is that seeing downstream task during pretraining will help during fine-tuning
+                - "leave-one-out" multi-task training:
+                    - pretrain on examples-proportional mixing (K=2^19) but skip the task on which you want to fine tune
+                    - compare this with previous variant to see if seeing downstream task during pretraining helps
+                - pre-train on supervised task only before fine-tuning
+            - results
+                - multi-task pre-training + fine-tuning performs same as unsupervised pre-training + fine-tuning
+                - "leave-one-out" training is only slightly worse than multi-task training
+                - unsupervised pre-training helps in most tasks except for translation
+        - Scaling Laws
+            - which scale factors give most bang for the buck?
+            - baseline = 220M parameters, pre-training for 2^19 steps and fine-tuning for 2^18 steps
+            - variants
+                - BERT_LARGE like model (d_ff = 4096, d_model = 1024)
+                    - Baseline_2x: has ~ 2x more parameters than baseline
+                    - Baseline_4x: has ~ 4x more parameters than baseline
+                - 3 ways of using 4x computation
+                    - train baseline for 4x more steps
+                    - train baseline_2x for 2x more steps
+                    - train baseline_4x for 1x more steps
+                    - NOTE: trainng more steps = seeing more data as C4 is huge
+                - ensemble methods for 4x computation
+                    - 4 seperately trained models and combine their outputs
+                    - 1 single pretrained model + 4 fine-tuned ensembles that are then combined (NOTE: this doesn't utilize 4x computation budget)
+                - 4x batch size instead of 4x training steps
+            - results
+                - both increasing training time (or data) and model size help
+                    - better than only increasing one of them and keeping other constant
+                    - no clear winner between training steps and model size. Both are complementary and add to the performance
+                - no clear winner between training steps and batch size
+                - 4x ensemble method also have similar performance and even best in some cases
+                - 4x ensemble on fine-tuned models performs better than baseline
+                - ensembling works and is probably an orthogonal direction to scale
+    - final design based on these learnings
+        - objective
+            - replace i.i.d denoising in baseline with random span corruption
+                - span corruption objective with mean span length = 3 and corrupt rate = 15%
+                - new objective is slightly better in both performance and efficiency (due to shorter target lengths)
+        - longer training
+            - C4 is much bigger than the initial dataset used by the baseline
+            - pre-train on 1 million steps, batch size = 2^11 = 2048, sequence length = 512 => total 1 trillion pre-training tokens (32x more than baseline)
+            - did not include in-domain data (wiki, books, etc.) in pre-training and used C4 only
+                - they'd be diluted in the huge C4 dataset without repetitions
+                - repetitions could hurt performance
+                - gains from in-domain data are small compared to gains from more data
+            - model sizes: train different variants
+                - base: 220 M parameters 
+                    - Same as baseline model
+                - small: 60 M parameters
+                    - d_model = 512 (instead of 768), d_ff = 2048 (instead of 3072), num_heads = 8 (instead of 12), num_layers = 6 (instead of 12)
+                - large: 770 M parameters 
+                    - similar to BERT_LARGE
+                    - d_model = 1024 (instead of 768), d_ff = 4096 (instead of 3072), num_heads = 16 (instead of 12), num_layers = 24 (instead of 12)
+                - 3B and 13B parameters
+                    - d_model is still 1024, num_layers is still 24 like BERT_LARGE
+                    - 3B: 32 heads and d_ff = 16,384
+                    - 13B: 128 heads and d_ff = 65,536
+                    - d_ff is increased because TPUs that google uses are more efficient for these large dense matrix multiplications
+        - multi-task pretraining
+            - though it perform similar to single-task pretraining, it is allows for "tracking" model peroformance on downstream tasks during training process
+            - used standard examples-proportional mixing with K tuned based on model size
+        - fine-tune on individual glue tasks
+            - need to be extra careful for small datasets
+                - reduce batch size to 8 and frequently checkpoint to get model parameters before overfitting
+        - Beam search (instead of greedy decoding)
+    - final results
+        - achieve sota in most tasks except WMT translations tasks (probably due to more English during pre-training)
+        - biggest model performs best on all tasks
 
 ## Multi-Modal Models
 
-- CLIP
+- [CLIP] [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/pdf/2103.00020v1)
+    - TODO: read and summarize
+        - beats the original ResNet-50 on ImageNet in zero shot
+        - uses image caption pairs from internet
+        - publically available weights
 
 ## Distillation
+
+- [DistilBERT] [DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter](https://arxiv.org/pdf/1910.01108)
+    - TODO: read and summarize
+        - see what different distillation methods are available
+        - how much speed up do they provide?
+
 
 # Links
 
