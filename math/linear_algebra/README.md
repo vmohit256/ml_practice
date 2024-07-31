@@ -36,7 +36,7 @@ https://web.mit.edu/18.06/www/Essays/newpaper_ver3.pdf
             - NOTE: eigen vectors aren't always orthogonal
     - decompositions in 2x2 case
         - ||x|| = ||y|| = 1
-        - A = [y1*x, y2*x, ..., yn*x] = [[x1 * y^T], [x2 * y^T], ..., [xn * y^T]]
+        - A = [y1 * x, y2 * x, ..., yn * x] = [[x1 * y^T], [x2 * y^T], ..., [xn * y^T]]
         - C(A) = {x}, N(A^T) = {x^perp}
         - R(A) = {y}, N(A) = {y^perp}
         - SVD
@@ -62,7 +62,7 @@ https://www.youtube.com/watch?v=mhy-ZKSARxI&ab_channel=VisualKernel
     - (Q^T Q)_ij = qi^T * qj = 1 if i = j, 0 otherwise
 - Spectral theorem: any symmetric matrix can be decomposed as: S = Q Lamda Q^T
     - TODO: understand its proof
-- for any n x m matrix, A A^T and A^T A are positive semi-definite
+- for any n x m matrix, A A^T and A^T A are symmetric positive semi-definite
     - they are non-negative eigen values
     - their overlapping eigen values are square of the eigen values of A
     - A = U Sigma V^T
@@ -78,7 +78,7 @@ https://www.youtube.com/watch?v=mhy-ZKSARxI&ab_channel=VisualKernel
             - so need to understand the coordinate functions to understand the function f
 - TODO: look at the the weird high-dimensional example in these [slides](https://www.math.iitb.ac.in/~ars/MA106/slides-I.pdf)
     - is this related to curse of dimensionality?
-    - curse of dimensionality: vague term for various problems that occur when yo go into higher dimensions
+    - curse of dimensionality: vague term for various problems that occur when you go into higher dimensions
         - data sparsity: tf-idf vectors
         - computational complexity: nearest neighbor search, kd-tree become difficult?
         - distance function becomes less intuitive. Doesn't behave like the way we would expect in 2D or 3D. Behaviour that we think is intuitive in 2D or 3D often doesn't hold in higher dimensions
@@ -273,9 +273,6 @@ https://www.youtube.com/watch?v=mhy-ZKSARxI&ab_channel=VisualKernel
         - D = M^-1 * A * M where M is the matrix of eigenvectors of A
             - M D = A M => M D e_i = A M e_i = A v_i = lambda_i v_i
         - n x n matrix  A is diagonalizable if and only if it has n linearly independent eigenvectors
-    - intuition
-        - eigen vectors are the basis where an ellipsoid is aligned with the axes of the space
-        - eigen values are the scaling factors along the axes of the aligned ellipsoid
     - characteristic polynomial: det(A - lambda I) = 0
         - roots of the characteristic polynomial are the eigenvalues of A
         - null space of A - lambda I is the eigenspace of A corresponding to eigenvalue lambda
