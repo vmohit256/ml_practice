@@ -147,6 +147,56 @@
             - assumes gaussian distribution (is the kernel version also possible?)
             - will fail if discriminator information is not in the mean but in variance
     - TODO: ICA, NMF
+- clustering
+    - applications
+        - analysing clusters may be easier than analysing the entire dataset. Eg: customer segmentation
+        - dimensionality reduction: affinity to cluster is a new feature
+        - anomaly detection: points that don't belong to any cluster
+        - semi-supervised learning: propagate few labels to entire cluster to obtain lots of labels
+        - search: search for similar items in a cluster
+        - recoloring: recolor images by clustering colors and replacing them with cluster centers. Eg: makes it easy to detect object boundaries
+    - k-means
+        - problems
+            - doesn't work well with clusters of different sizes, densities, or non-spherical shapes
+            - sensitive to initial cluster centers
+                - finds local minima
+                - need to run multiple times with different initializations to get better results
+        - hard v/s soft clustering: soft clustering is a greta non-linear dimensionality reduction technique
+        - very fast: in practice. Though worst case is exponential
+        - silhouette score: measure of how similar an instance is to its own cluster compared to other clusters
+            - ranges from -1 to 1 (not well matched to assigned cluster, well matched to cluster)
+            = (b – a) / max(a, b) where a = mean intra-cluster distance, b = mean nearest-cluster distance
+        - preprocessor for classifier
+            - instead of feeding high-dimensional data to classifier, feed soft labels for cluster centers
+            - boosts accuracy if classifier is sensitive to noise like logistic regression
+        - *IMPORTANT*: semi-supervised learning
+            - a method to efficiently label a dataset when short on labels
+                - step-1: cluster the dataset
+                - step-2: label a few strong representative points in each cluster
+                - step-3: propagate the labels to the entire cluster or a significant portion of it such that the precision is maintained
+                - step-4: train a classifier on the labeled dataset. HOML book got 94% accuracy on mnist with just 50 labels (5 per sample)
+    - DBSCAN
+        - simple chaining
+            - keep adding core points to the cluster if they are < eps distance away
+            - core point = has at least min_samples points within eps distance
+        - pros
+            - doesn't require number of clusters as input
+            - can handle clusters of different shapes and sizes
+        - cons
+            - labels a lot of points as noise 
+            - need to specify eps and min_samples. These are highly sensitive to the dataset
+    - Agglomerative clustering
+        - very customizable
+        - linkage: ‘ward’, ‘complete’, ‘average’, ‘single’
+        - metric: “euclidean”, “l1”, “l2”, “manhattan”, “cosine”
+    - GMM
+        - fix number of clusters = k
+        - get MLE estimate of parameters of k multivariate gaussian distribution using em algorithm
+        - gives soft clustering and probaiblity scores
+            - use as dimentionality reduction, preprocessor for classifier, etc.
+            - use as anomaly detection
+- anomaly detection
+- density estimation
 
 # References
 
